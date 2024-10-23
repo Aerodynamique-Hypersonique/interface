@@ -1,0 +1,9 @@
+# hidden files
+.*
+!.gitignore
+
+# test files
+test*
+
+# pycache files
+__pycache__
