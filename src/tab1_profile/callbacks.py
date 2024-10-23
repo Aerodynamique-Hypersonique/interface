@@ -5,6 +5,7 @@ from dash import no_update
 import numpy as np
 from src.layout import *
 import pandas as pd
+import re
 
 
 def define_callbacks1(app):
@@ -69,6 +70,8 @@ def define_callbacks1(app):
 
     @app.callback(
         Output('shape-graphs', 'figure', allow_duplicate=True),
+        Output('error-text-upload', 'style'),
+        Output('error-text-upload', 'children'),
         Input('upload-profile', 'contents'),
         State('upload-profile', 'filename'),
         prevent_initial_call=True
@@ -78,14 +81,31 @@ def define_callbacks1(app):
         content_type, content_string = _content.split(',')
         decoded = base64.b64decode(content_string)
         if _filename.split('.')[1] == 'csv':
-            df = pd.read_csv(io.StringIO(decoded.decode("utf-8")))
-            if df.shape[1] == 2: # x and y
-                x = df.iloc[:,0].to_numpy()
-                y = df.iloc[:,1].to_numpy()
+            df = pd.read_csv(io.StringIO(decoded.decode("utf-8")), sep='\t')
+            columns_name = df.columns.tolist()
+            pattern_x = re.compile(r'.*?x.*?')
+            pattern_y = re.compile(r'.*?y.*?')
+
+            x_col = -1
+            y_col = -1
+            for(index, item) in enumerate(columns_name):
+                item = item.lower()
+                if pattern_x.match(item):
+                    x_col = index
+                elif pattern_y.match(item):
+                    y_col = index
+
+            if x_col > -1 and y_col > -1: # x and y or x and y and z (in case)
+                x = df.iloc[:,x_col].to_numpy()
+                y = df.iloc[:,y_col].to_numpy()
 
                 figure = go.Figure(data=go.Scatter(x=x, y=y),
                                    layout=dark_graph_layout)
-                return figure
+                return figure, {'visibility': 'hidden'}, ""
+            else:
+                return go.Figure(layout=dark_graph_layout), {}, "Erreur! Format tabulaire avec au moins deux colonnes contenant le titre 'x' et 'y'"
+
+
 
         return no_update
 

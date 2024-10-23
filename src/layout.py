@@ -28,6 +28,7 @@ def get_layout():
                                 html.A('Selectionner un fichier')
                                 ])
                         ),
+                        html.P("", id='error-text-upload', style={'visibility': 'hidden'}),
                     ], id='div-dropdown'),
                     html.Div(children=[
                         html.B("Taille du profil", id='text-input-length'),
