@@ -1,4 +1,4 @@
-from dash.exceptions import PreventUpdate
+from dash import no_update
 import numpy as np
 from src.layout import *
 
@@ -35,9 +35,10 @@ def define_callbacks1(app):
                 figure = go.Figure(data=go.Scatter(x=profile.get_x(), y=profile.get_y()),
                                    layout=dark_graph_layout)
                 figure.add_trace(go.Scatter(x=profile.get_x(), y=-profile.get_y()))
+                print(profile.to_json())
                 return figure, profile.to_json()
 
-        return PreventUpdate
+        return no_update
 
     @app.callback(
         Output('div-dynamic-components', 'children'),

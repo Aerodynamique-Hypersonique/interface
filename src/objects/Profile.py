@@ -2,6 +2,24 @@ import math
 import numpy as np
 import json
 
+
+
+def load_profile_from_dict(_dict):
+    if _dict['class'] == 'Profile':
+        profile = Profile()
+        profile.from_dict(_dict)
+        return profile
+    elif _dict['class'] == 'Parabolic':
+        parabolic = Parabolic()
+        parabolic.from_dict(_dict)
+        return parabolic
+    elif _dict['class'] == 'Conical':
+        conical = Conical()
+        conical.from_dict(_dict)
+        return conical
+    else:
+        return None
+
 class Profile:
     def __init__(self, _x=np.array([]), _y=np.array([]), _angle=0, _length=0, _radius=0.0):
         self.x = _x
@@ -17,6 +35,15 @@ class Profile:
         self.length = _dict['length']
         self.radius = _dict['radius']
 
+    def to_dict(self):
+        return {'class' : 'Profile',
+                'x'     : self.x.tolist(),
+                'y'     : self.y.tolist(),
+                'angle' : self.angle,
+                'length': self.length,
+                'radius': self.radius
+                }
+
     def get_x(self):
         return self.x
     def get_y(self):
@@ -25,7 +52,7 @@ class Profile:
 
 
 class Parabolic(Profile):
-    def __init__(self, _angle=0, _length=0, _k=0):
+    def __init__(self, _angle=1, _length=5, _k=0):
         # K is the parabola type 0 <= K <= 1
         self.angle  = _angle
         self.length = _length
@@ -38,18 +65,13 @@ class Parabolic(Profile):
         Profile.__init__(self, self.x, self.y, self.angle, self.length, self.radius)
 
     def from_dict(self, _dict):
-        if _dict['name'] == 'Parabolic':
+        if _dict['class'] == 'Parabolic':
             Profile.from_dict(self, _dict['profile'])
             self.k = _dict['k']
 
     def to_dict(self):
-        return {'name': 'Parabolic',
-                'profile': {'x': self.get_x().tolist(),
-                            'y': self.get_y().tolist(),
-                            'angle': self.angle,
-                            'length': self.length,
-                            'radius': self.radius,
-                            },
+        return {'class': 'Parabolic',
+                'profile': Profile.to_dict(self),
                 'k': self.radius
                 }
 
@@ -58,7 +80,7 @@ class Parabolic(Profile):
 
 
 class Conical(Profile):
-    def __init__(self, _angle=0, _nose_rad=0, _length=0):
+    def __init__(self, _angle=1, _nose_rad=1, _length=5):
         self.angle      = _angle
         self.length     = _length
         self.nose_rad  = _nose_rad
@@ -91,7 +113,7 @@ class Conical(Profile):
         Profile.__init__(self, self.x, self.y, self.angle, self.length, self.radius)
 
     def from_dict(self, _dict):
-        if _dict['name'] == 'Conical':
+        if _dict['class'] == 'Conical':
             Profile.from_dict(self, _dict['profile'])
             self.x_nose = np.array(_dict['x_nose'])
             self.y_nose = np.array(_dict['y_nose'])
@@ -103,16 +125,11 @@ class Conical(Profile):
         return self.y_nose
 
     def to_dict(self):
-        return {'name': 'Conical',
-                'profile': {'x': self.get_x().tolist(),
-                            'y': self.get_y().tolist(),
-                            'angle': self.angle,
-                            'length': self.length,
-                            'radius': self.radius,
-                            },
-                'nose_rad': self.nose_rad,
-                'x_nose': self.x_nose.tolist(),
-                'y_nose': self.y_nose.tolist()
+        return {'class'      : 'Conical',
+                'profile'   : Profile.to_dict(self),
+                'nose_rad'  : self.nose_rad,
+                'x_nose'    : self.x_nose.tolist(),
+                'y_nose'    : self.y_nose.tolist()
                 }
 
     def to_json(self):

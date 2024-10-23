@@ -2,40 +2,41 @@ from src.layout import *
 import numpy as np
 import json
 
+from src.objects.Physics import ATM_LAYER_ALT
+from src.objects.Profile import load_profile_from_dict
+
 
 def define_callbacks3(app):
     @app.callback(
         Output('results-graphs', 'figure'),
         Input('ok-button-calcul', 'n_clicks'),
         State('profile-store', 'data'),
+        State('physics-store', 'data'),
         prevent_initial_call=True
     )
-    def calcul(_n_clicks, _profile):
-        _profile = json.loads(_profile)
-        if _profile is {}:
-            return
-
-        if _profile['name'] == 'Conical':
-            profile = Profile.Conical()
-        elif _profile['name'] == 'Parabolic':
-            profile = Profile.Parabolic()
-        else:
-            return
-
-        profile.from_dict(_profile)
+    def calcul(_n_clicks, _profile_dict, _physics_dict):
+        profile: Profile.Profile = load_profile_from_dict(json.loads(_profile_dict))
+        physics = Physics.Physics()
+        physics.from_dict(json.loads(_physics_dict))
 
         x = profile.get_x()
         y = profile.get_y()
-        panel_num = len(x) - 1
-        panels = np.array([x[:-1], x[1:], y[:-1], y[1:]]).T
 
-        dx = panels[:, 1] - panels[:, 0]
-        dy = panels[:, 3] - panels[:, 2]
-        lengths = np.sqrt(dx**2 + dy**2)
-        angles = np.arctan2(dy, dx)
+        rho = physics.get_rho()
+        mu = physics.get_mu()
 
-        figure = go.Figure(layout=dark_graph_layout)
-        for i in range(panel_num):
-            figure.add_trace(go.Scatter(x=[panels[i, 0], panels[i, 1]], y=[panels[i, 2], panels[i, 3]]))
+        local_reynolds = physics.get_local_reynolds(x)
+        print(physics.atm.pressure)
 
-        return figure
+        boundary_layer = ((x / np.sqrt(local_reynolds)) *
+                          (np.sqrt((Physics.ATM_SEA_LEVEL['density'] * mu) / (
+                                      rho * Physics.ATM_SEA_LEVEL['dynamic_visco']))))
+
+        fig = go.Figure(data=go.Scatter(x=x, y=y, name='Profil'),
+                        layout=dark_graph_layout)
+
+        fig.add_trace(go.Scatter(x=x, y=boundary_layer + y, name='Couche Limite', line={'dash': 'dash'}))
+
+        return fig
+
+

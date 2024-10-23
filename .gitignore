@@ -3,7 +3,7 @@
 !.gitignore
 
 # test files
-test*
+test/test_app_callbacks.py
 
 # pycache files
 __pycache__

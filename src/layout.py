@@ -10,12 +10,11 @@ dark_graph_layout = go.Layout(
     yaxis=dict(showgrid=False, zeroline=False),
     margin=dict(l=40, r=40, t=40, b=40),  # Adjust margins for better spacing
 )
-fig = go.Figure(layout=dark_graph_layout)
 
 def get_layout():
     return html.Div([
     dcc.Store(id='profile-store'),
-    dcc.Store(id='shock-store'),
+    dcc.Store(id='physics-store'),
     dcc.Tabs(id="tabs", value='tab-1', children=[
         dcc.Tab(label='Création du profil', value='tab-1', style={'backgroundColor': '#2c2f33', 'color': '#f0f0f0'},
                  selected_style={'backgroundColor': '#3a3a3a', 'color': '#ffffff'}, children=[
@@ -35,20 +34,19 @@ def get_layout():
                     ], id='div-selection-attributes'),
                 ], id='div-selection'),
 
-                dcc.Graph(id='shape-graphs', figure=fig, style={'height': '100vh'})
+                dcc.Graph(id='shape-graphs', figure=go.Figure(layout=dark_graph_layout), style={'height': '100vh'})
         ]),
 
         # Second Tab: Valeurs initiales
         dcc.Tab(label='Valeurs initiales', value='tab-2', style={'backgroundColor': '#2c2f33', 'color': '#f0f0f0'},
             selected_style={'backgroundColor': '#3a3a3a', 'color': '#ffffff'}, children=[
-            html.H1(children='Valeurs initiales', style={'color': '#f0f0f0', 'textAlign': 'center'}),
+            dcc.Checklist(options=[{'label': 'Rendre les valeurs modifiables', 'value': 'modify'}], id='modify-values-check',
+                          style={'float': 'right', 'color': '#f0f0f0'}),
+            html.H1(children='Valeurs initiales', style={'color': '#f0f0f0', 'flex-grow': '1', 'textAlign': 'center'}),
             html.Div(children=[
+
                 # Column 1
                 html.Div([
-                    html.B("Altitude (m)", style={'color': '#f0f0f0'}),
-                    dcc.Input(id='input-altitude', placeholder="Entrez l'altitude", type='number',
-                              value=Physics.ATM_SEA_LEVEL['altitude'],
-                              style={'backgroundColor': '#3a3a3a', 'color': '#f0f0f0'}),
                     html.B("Masse Molaire (g/mol)", style={'color': '#f0f0f0'}),
                     dcc.Input(id='input-mass-mol', placeholder="Entrez la masse molaire", type='number',
                               value=Physics.ATM_SEA_LEVEL['m_mol'], disabled=True,
@@ -64,17 +62,27 @@ def get_layout():
                               value=Physics.ATM_SEA_LEVEL['temperature'], disabled=True,
                               style={'backgroundColor': '#3a3a3a', 'color': '#f0f0f0'}),
                 ], style={'display': 'flex', 'flexDirection': 'column', 'gap': '15px'}),
+
                 # Column 2
                 html.Div([
+                    html.B("Altitude (m)", style={'color': '#f0f0f0'}),
+                    dcc.Input(id='input-altitude', placeholder="Entrez l'altitude", type='number',
+                              value=Physics.ATM_SEA_LEVEL['altitude'],
+                              style={'backgroundColor': '#3a3a3a', 'color': '#f0f0f0'}),
                     html.B("Vitesse X", style={'color': '#f0f0f0'}),
                     dcc.Input(id='input-velocity-x', placeholder="Entrez la vitesse selon X", type='number',
-                              value=0, disabled=True,
+                              value=0,
                               style={'backgroundColor': '#3a3a3a', 'color': '#f0f0f0'}),
                     html.B("Vitesse Y", style={'color': '#f0f0f0'}),
                     dcc.Input(id='input-velocity-y', placeholder="Entrez la vitesse selon Y", type='number',
-                              value=0, disabled=True,
+                              value=0,
+                              style={'backgroundColor': '#3a3a3a', 'color': '#f0f0f0'}),
+                    html.B("Gravité (m.s2)", style={'color': '#f0f0f0'}),
+                    dcc.Input(id='input-gravity', placeholder="Entrez la gravité", type='number',
+                              value=Physics.ATM_SEA_LEVEL['gravity'], disabled=True,
                               style={'backgroundColor': '#3a3a3a', 'color': '#f0f0f0'}),
                 ], style={'display': 'flex', 'flexDirection': 'column', 'gap': '15px'}),
+
                 # Column 3
                 html.Div([
                     html.B("Densité", style={'color': '#f0f0f0'}),
@@ -91,28 +99,23 @@ def get_layout():
                     dcc.Input(id='input-gamma', placeholder="Entrez l'indice adiabatique", type='number',
                               value=Physics.ATM_SEA_LEVEL['gamma'], disabled=True,
                               style={'backgroundColor': '#3a3a3a', 'color': '#f0f0f0'}),
-
-                    html.B("Gravité (m.s2)", style={'color': '#f0f0f0'}),
-                    dcc.Input(id='input-gravity', placeholder="Entrez la gravité", type='number',
-                              value=Physics.ATM_SEA_LEVEL['gravity'], disabled=True,
-                              style={'backgroundColor': '#3a3a3a', 'color': '#f0f0f0'}),
                 ], style={'display': 'flex', 'flexDirection': 'column', 'gap': '15px'}),
             ], style={'display': 'flex', 'justifyContent': 'space-around', 'marginTop': '20px'}),
             html.Div(children=[
                 html.Button("OK", id='ok-button-value', className='ok-button', n_clicks=0),
             ], style={'display': 'flex', 'flexDirection': 'column', 'alignItems': 'center', 'width': '40%',
-                      'margin': '0 auto', 'gap': '15px'}),
+                      'margin': '0 auto', 'gap': '15px', 'margin-top': '100px'}),
 
         ]),
         # Third tab : Results
-        dcc.Tab(label='Résultats', value='tab-3', style={'backgroundColor': '#2c2f33', 'color': '#f0f0f0'},
+        dcc.Tab(label='Calculs', value='tab-3', style={'backgroundColor': '#2c2f33', 'color': '#f0f0f0'},
                 selected_style={'backgroundColor': '#3a3a3a', 'color': '#ffffff'}, children=[
             html.H1(children='Résultats', style={'color': '#f0f0f0', 'textAlign': 'center'}),
             html.Div(children=[
                 html.Button("Calcul", id='ok-button-calcul', className='ok-button', n_clicks=0),
             ], style={'display': 'flex', 'flexDirection': 'column', 'alignItems': 'center', 'width': '40%',
                       'margin': '0 auto', 'gap': '15px'}),
-            dcc.Graph(id='results-graphs', figure=fig, style={'height': '100vh'})
+            dcc.Graph(id='results-graphs', figure=go.Figure(layout=dark_graph_layout), style={'height': '100vh'})
         ]),
 
     ]),
