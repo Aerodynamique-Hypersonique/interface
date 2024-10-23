@@ -1,0 +1,126 @@
+/* Global background and text styles */
+body {
+    background-color: #1d1f21;
+    color: #f0f0f0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 20px;
+    margin: 0;
+}
+
+/* Title styling */
+h1 {
+    text-align: center;
+    font-size: 3em;
+    font-weight: bold;
+    color: #ffffff;
+    margin-bottom: 40px;
+}
+
+/* Dropdown styling */
+#dropdown-shape {
+    background-color: #2e2e2e;
+    color: #f0f0f0;
+    border: none;
+    border-radius: 10px;
+    padding: 10px;
+    width: 100%;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+#dropdown-shape:hover {
+    background-color: #3a3a3a;
+}
+
+/* Button styling */
+.ok-button {
+    background-color: #4caf50;
+    color: white;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.2em;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    margin-top: 10px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.ok-button:hover {
+    background-color: #66bb6a;
+    transform: translateY(-3px);
+}
+
+/* Flexbox container for selection section */
+#div-selection {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 40px;
+    background-color: #2c2f33;
+    border-radius: 16px;
+    box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.5);
+    margin-bottom: 50px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Styling for profile attributes section */
+#div-selection-attributes {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 30px;
+    background-color: #2e2e2e;
+    border-radius: 12px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+    width: 45%;
+}
+
+/* Graph styling */
+#shape-graphs {
+    background-color: #2c2f33;
+    height: 500px;
+    border-radius: 12px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+    padding: 10px;
+}
+
+/* Input fields styling */
+input[type="number"] {
+    background-color: #2e2e2e;
+    color: #f0f0f0;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    width: 100%;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+input[type="number"]:hover {
+    background-color: #3a3a3a;
+}
+
+/* Profile attribute labels */
+b {
+    color: #ffffff;
+    font-size: 1.1em;
+}
+
+/* Dropdown options styling */
+#dropdown-shape .Select-control {
+    color: #000000; /* Set text color inside dropdown when closed */
+}
+
+#dropdown-shape .Select-menu {
+    background-color: #2e2e2e; /* Keep the background dark when options open */
+}
+
+#dropdown-shape .Select-option {
+    color: #f0f0f0; /* Set text color for dropdown options */
+}
+
+#dropdown-shape .Select-option:hover {
+    background-color: #3a3a3a; /* Highlight color on hover */
+    color: #ffffff;
+}
