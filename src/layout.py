@@ -23,6 +23,11 @@ def get_layout():
                     html.Div(children=[
                         dcc.Dropdown(['Parabolique', 'Conique', 'Ogive'], id='dropdown-shape'),
                         html.Button("OK", id='ok-button-profile', className='button', n_clicks=0),
+                        dcc.Upload(id='upload-profile', children=html.Div([
+                                'Glisser-Déposer ou ',
+                                html.A('Selectionner un fichier')
+                                ])
+                        ),
                     ], id='div-dropdown'),
                     html.Div(children=[
                         html.B("Taille du profil", id='text-input-length'),

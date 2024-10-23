@@ -1,18 +1,23 @@
+import base64
+import io
+
 from dash import no_update
 import numpy as np
 from src.layout import *
+import pandas as pd
 
 
 def define_callbacks1(app):
     @app.callback(
-        Output('shape-graphs', 'figure'),
+        Output('shape-graphs', 'figure', allow_duplicate=True),
         Output('profile-store', 'data'),
         Input('ok-button-profile', 'n_clicks'),
         State('input-length', 'value'),
         State('input-angle', 'value'),
         State('dropdown-shape', 'value'),
         State('div-dynamic-components', 'children'),
-        prevent_initial_call=True
+        prevent_initial_call=True,
+        allow_duplicate=True
     )
     def plot_shape(_n_clicks, _length, _angle, _shape, _dyn_attributes):
         if _shape == 'Conique':
@@ -61,3 +66,28 @@ def define_callbacks1(app):
             ])
 
         return html.Div()
+
+    @app.callback(
+        Output('shape-graphs', 'figure', allow_duplicate=True),
+        Input('upload-profile', 'contents'),
+        State('upload-profile', 'filename'),
+        prevent_initial_call=True
+    )
+    def update_figure(_content, _filename):
+        # CSV file : X,Y\newline
+        content_type, content_string = _content.split(',')
+        decoded = base64.b64decode(content_string)
+        if _filename.split('.')[1] == 'csv':
+            df = pd.read_csv(io.StringIO(decoded.decode("utf-8")))
+            if df.shape[1] == 2: # x and y
+                x = df.iloc[:,0].to_numpy()
+                y = df.iloc[:,1].to_numpy()
+
+                figure = go.Figure(data=go.Scatter(x=x, y=y),
+                                   layout=dark_graph_layout)
+                return figure
+
+        return no_update
+
+
+
