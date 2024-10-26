@@ -22,7 +22,10 @@ def get_layout():
                 html.Div(children=[
                     html.Div(children=[
                         dcc.Dropdown(['Parabolique', 'Conique', 'Ogive'], id='dropdown-shape'),
-                        html.Button("OK", id='ok-button-profile', className='button', n_clicks=0),
+                        html.Div(children=[
+                            html.Button("OK", id='ok-button-profile', className='button', n_clicks=0),
+                            html.Button("?", id="help-button-profile", className="help-button", n_clicks=0),
+                        ], id='div-ok-help-button'),
                         dcc.Upload(id='upload-profile', children=html.Div([
                                 'Glisser-Déposer ou ',
                                 html.A('Selectionner un fichier')

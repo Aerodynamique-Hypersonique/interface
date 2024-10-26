@@ -69,6 +69,13 @@ h1 {
     transform: translateY(-3px);
 }
 
+/* div-ok-help-button design */
+#div-ok-help-button {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
 /* Flexbox container for selection section */
 #div-selection {
     display: flex;
@@ -125,5 +132,15 @@ h1 {
     border-radius: 5px;
     text-align: center;
     margin: 10px;
+}
+
+/* Help button */
+.help-button{
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    border-radius: 50%;
 }
 

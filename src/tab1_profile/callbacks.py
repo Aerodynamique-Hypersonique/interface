@@ -1,5 +1,6 @@
 import base64
 import io
+import webbrowser
 
 from dash import no_update
 import numpy as np
@@ -25,12 +26,17 @@ def define_callbacks1(app):
             radius_nose = _dyn_attributes['props']['children'][1]['props']['value']  # Retrieve the radius_nose value
             if radius_nose is not None:
                 profile = Profile.Conical(_angle, radius_nose, _length)
+                profile.x_nose = profile.x_nose - np.min(profile.x_nose)
+                profile.x = profile.x - np.min(profile.x_nose)
 
                 figure = go.Figure(data=go.Scatter(x=np.concatenate((profile.get_x_nose(), profile.get_x())),
-                                                   y=np.concatenate((profile.get_y_nose(), profile.get_y()))),
+                                                   y=np.concatenate((profile.get_y_nose(), profile.get_y())),
+                                                   name='profil'),
                                    layout=dark_graph_layout)
                 figure.add_trace(go.Scatter(x=np.concatenate((profile.get_x_nose(), profile.get_x())),
-                                            y=np.concatenate((-profile.get_y_nose(), -profile.get_y()))))
+                                            y=np.concatenate((-profile.get_y_nose(), -profile.get_y())),
+                                            name='profil (symétrie)'))
+
                 return figure, profile.to_json()
 
         elif _shape == 'Parabolique':
@@ -41,7 +47,6 @@ def define_callbacks1(app):
                 figure = go.Figure(data=go.Scatter(x=profile.get_x(), y=profile.get_y()),
                                    layout=dark_graph_layout)
                 figure.add_trace(go.Scatter(x=profile.get_x(), y=-profile.get_y()))
-                print(profile.to_json())
                 return figure, profile.to_json()
 
         return no_update
@@ -109,5 +114,12 @@ def define_callbacks1(app):
 
         return no_update
 
-
-
+    @app.callback(
+        Output('help-button-profile', 'n_clicks'),
+        Input('help-button-profile', 'n_clicks'),
+        prevent_initial_call=True
+    )
+    def get_help(_n_clicks):
+        if _n_clicks > 0:
+            webbrowser.open_new_tab('helps/help_profile.html')
+        return _n_clicks
