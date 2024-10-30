@@ -33,7 +33,6 @@ def define_callbacks2(app):
         physics.velocity_x = _velo_x
         physics.velocity_y = _velo_y
 
-        print(physics.to_json())
         return physics.to_json()
 
     @app.callback(

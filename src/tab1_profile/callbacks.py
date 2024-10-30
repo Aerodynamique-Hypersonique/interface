@@ -26,17 +26,27 @@ def define_callbacks1(app):
             radius_nose = _dyn_attributes['props']['children'][1]['props']['value']  # Retrieve the radius_nose value
             if radius_nose is not None:
                 profile = Profile.Conical(_angle, radius_nose, _length)
-                profile.x_nose = profile.x_nose - np.min(profile.x_nose)
-                profile.x = profile.x - np.min(profile.x_nose)
+                figure = go.Figure(
+                    data=go.Scatter(
+                        x=profile.get_x(),
+                        y=profile.get_y(),
+                        fill='tozeroy',
+                        fillpattern=dict(shape="/"),
+                        line=dict(color='grey')
+                    ),
+                    layout=dark_graph_layout)
 
-                figure = go.Figure(data=go.Scatter(x=np.concatenate((profile.get_x_nose(), profile.get_x())),
-                                                   y=np.concatenate((profile.get_y_nose(), profile.get_y())),
-                                                   name='profil'),
-                                   layout=dark_graph_layout)
-                figure.add_trace(go.Scatter(x=np.concatenate((profile.get_x_nose(), profile.get_x())),
-                                            y=np.concatenate((-profile.get_y_nose(), -profile.get_y())),
-                                            name='profil (symétrie)'))
+                figure.add_trace(
+                    go.Scatter(
+                        x=profile.get_x(),
+                        y=-profile.get_y(),
+                        fill='tozeroy',
+                        fillpattern=dict(shape="/"),
+                        line=dict(color='grey')
+                    )
+                )
 
+                figure.update_layout(title="Profil Conique")
                 return figure, profile.to_json()
 
         elif _shape == 'Parabolique':
@@ -44,11 +54,55 @@ def define_callbacks1(app):
             if k is not None:
                 profile = Profile.Parabolic(_angle, _length, k)
 
-                figure = go.Figure(data=go.Scatter(x=profile.get_x(), y=profile.get_y()),
-                                   layout=dark_graph_layout)
-                figure.add_trace(go.Scatter(x=profile.get_x(), y=-profile.get_y()))
-                return figure, profile.to_json()
+                figure = go.Figure(
+                    data=go.Scatter(
+                        x=profile.get_x(),
+                        y=profile.get_y(),
+                        fill='tozeroy',
+                        fillpattern=dict(shape="/"),
+                        line=dict(color='grey')
+                    ),
+                    layout=dark_graph_layout)
 
+                figure.add_trace(
+                    go.Scatter(
+                        x=profile.get_x(),
+                        y=-profile.get_y(),
+                        fill='tozeroy',
+                        fillpattern=dict(shape="/"),
+                        line=dict(color='grey')
+                    )
+                )
+
+                figure.update_layout(title="Profil Parabolique")
+                return figure, profile.to_json()
+        elif _shape == 'Ariane 4':
+            profile = Profile.Ariane4()
+            x = profile.get_x()
+            y = profile.get_y()
+
+
+            figure = go.Figure(
+                data=go.Scatter(
+                    x=x,
+                    y=y,
+                    name='Profil',
+                    fill='tozeroy',
+                    fillpattern=dict(shape="/"),
+                    line=dict(color='grey')),
+                layout=dark_graph_layout)
+
+            figure.add_trace(
+                go.Scatter(
+                    x=x,
+                    y=-y,
+                    name='Profil (symétrie)',
+                    fill='tozeroy',
+                    fillpattern=dict(shape="/"),
+                    line=dict(color='grey')
+                ))
+            figure.update_layout(title="Ariane 4")
+            return figure, profile.to_json()
         return no_update
 
     @app.callback(

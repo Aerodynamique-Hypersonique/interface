@@ -21,7 +21,7 @@ def get_layout():
             html.H1(children='Création du profil'),
                 html.Div(children=[
                     html.Div(children=[
-                        dcc.Dropdown(['Parabolique', 'Conique', 'Ogive'], id='dropdown-shape'),
+                        dcc.Dropdown(['Parabolique', 'Conique', 'Ariane 4'], id='dropdown-shape'),
                         html.Div(children=[
                             html.Button("OK", id='ok-button-profile', className='button', n_clicks=0),
                             html.Button("?", id="help-button-profile", className="help-button", n_clicks=0),
