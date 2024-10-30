@@ -12,7 +12,7 @@ ATM_SEA_LEVEL = {
     'tz': -6.5 * 1e-3,
     'density': 1.225,
     'viscosity': 1.458 * 1e-6,
-    'dynamic_visco': 1.8e-5,
+    'mu': 1.8e-5,
     'gamma': 1.4,
     'R': 8.314,
     'Cp': ((8.314 / (28.966 * 1e-3)) * 1.4) / (1.4 - 1),
@@ -88,6 +88,7 @@ class Atmosphere:
         self.gamma          = ATM_SEA_LEVEL['gamma']
         self.R              = ATM_SEA_LEVEL['R']
         self.altitude       = ATM_SEA_LEVEL['altitude']
+        self.mu             = ATM_SEA_LEVEL['mu']
 
         self.rs = self.R / self.m_mol
         self.cp = (self.rs * self.gamma) / (self.gamma - 1)
@@ -100,12 +101,12 @@ class Atmosphere:
         self.temperature = self.t_evolution.get_temperature(_z)
         self.density = self.pressure / (self.temperature * self.rs)
         self.viscosity = self.viscosity * (self.temperature ** (3 / 2) / (110.4 + self.temperature))
+        self.mu = (self.temperature / ATM_SEA_LEVEL['temperature']) ** (3 / 2) * ((ATM_SEA_LEVEL['temperature'] + 110) / self.temperature + 110) * ATM_SEA_LEVEL['mu']
 
         self.altitude   = _z
 
         return {'pressure': self.pressure, 'temperature': self.temperature,
                 'density': self.density, 'viscosity': self.viscosity}
-
     def get_atm_data(self):
         return {'m_mol': self.m_mol, 'pressure': self.pressure, 'temperature': self.temperature, 'density': self.density,
                 'viscosity': self.viscosity, 'gamma': self.gamma, 'R': self.R, 'rs': self.rs,
@@ -166,16 +167,6 @@ class Physics:
     def to_json(self):
         return json.dumps(self.to_dict())
 
-    def get_rho(self):
-        return self.atm.pressure / (self.atm.rs * self.atm.temperature)
-
-    def get_mu(self):
-        return (self.atm.temperature / ATM_SEA_LEVEL['temperature']) ** (3 / 2) * (
-                    (ATM_SEA_LEVEL['temperature'] + 110) / (self.atm.temperature + 110)) * ATM_SEA_LEVEL['dynamic_visco']
-
-    def get_local_reynolds(self, _x):
-        # TODO: velocity y
-        return self.get_rho() * self.velocity_x * _x * 1e-3 / self.get_mu()
 
 
 
@@ -215,6 +206,21 @@ class HypersonicObliqueShock:
 
     def get_mach_number(self):
         return self.physic.velocity_x / self.sound_speed
+
+    def get_local_reynolds(self, _x):
+        # TODO: velocity y
+        return self.flow_characteristics['density'] * self.flow_characteristics['velocity_n'] * _x / self.physic.atm.mu
+
+    def get_boundary_layer(self, _x):
+        r = 0.85 # laminar 0.9 turbulent
+        tf = 1 + r * ((self.physic.atm.gamma - 1) / 2) * (self.flow_characteristics['mach_amb'] ** 2)
+        tbar = tf * self.flow_characteristics['temperature']
+        # Chapman-Rubesin constant
+        c0 = (self.physic.atm.mu / ATM_SEA_LEVEL['mu']) / (tbar / self.flow_characteristics['temperature'])
+        print()
+        return _x * np.sqrt(c0) * ((self.physic.atm.gamma - 1) / 2) * (
+                    self.flow_characteristics['mach_amb'] ** 2) / np.sqrt(self.get_local_reynolds(_x))
+
 
     def get_deviation_and_shock_angle(self):
         dy_dx = np.gradient(self.profile.get_y(), self.profile.get_x())

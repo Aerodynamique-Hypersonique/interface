@@ -34,7 +34,7 @@ def plot_the_shock_along_profile(_profile, _hypersonic):
             fillpattern=dict(shape="/"),
             line=dict(color='grey')
         ))
-    figure.update_layout(title="Ariane 4")
+    figure.update_layout(title=_profile.to_dict()['class'])
 
     # shock layer
     figure.add_trace(
@@ -137,10 +137,53 @@ def plot_deviation_angle(_profile, _hypersonic):
 
     return figure
 
+def boundary_layer_figure(_profile : Profile, _hypersonic : HypersonicObliqueShock):
+    x = _profile.get_x()
+    y = _profile.get_y()
+
+    """if re_local > 3000:
+        r = 0.90"""
+    delta = _hypersonic.get_boundary_layer(x)
+
+    print(delta)
+    print(np.nanmax(delta))
+
+    figure = go.Figure(
+        data=go.Scatter(
+            x=x,
+            y=y,
+            name='Profil',
+            fill='tozeroy',
+            fillpattern=dict(shape="/"),
+            line=dict(color='grey')),
+        layout=dark_graph_layout)
+
+    figure.add_trace(
+        go.Scatter(
+            x=x,
+            y=-y,
+            name='Profil (Symétrie)',
+            fill='tozeroy',
+            fillpattern=dict(shape="/"),
+            line=dict(color='grey')
+        ))
+    figure.update_layout(title=_profile.to_dict()['class'])
+
+    figure.add_trace(
+        go.Scatter(
+            x=x,
+            y=y + delta
+        )
+    )
+
+    return figure
+
+
 def define_callbacks3(app):
     @app.callback(
         Output({'type': 'graph-grid', 'index': 0}, 'figure'),
         Output({'type': 'graph-grid', 'index': 1}, 'figure'),
+        Output({'type': 'graph-grid', 'index': 2}, 'figure'),
         Input('ok-button-calcul', 'n_clicks'),
         State('profile-store', 'data'),
         State('physics-store', 'data'),
@@ -160,7 +203,10 @@ def define_callbacks3(app):
         # Deviation angle
         figure_deviation = plot_deviation_angle(profile, hypersonic)
 
-        return figure, figure_deviation
+        # boundary layer
+        figure_boundary = boundary_layer_figure(profile, hypersonic)
+
+        return figure, figure_deviation, figure_boundary
 
 
     @app.callback(
