@@ -1,6 +1,7 @@
 from src.tab1_profile.callbacks import *
 from src.tab2_values.callbacks import *
 from src.tab3_calculs.callbacks import *
+from dash import Dash
 
 app = Dash(suppress_callback_exceptions=True)
 app.layout = get_layout() # call the function from layout file

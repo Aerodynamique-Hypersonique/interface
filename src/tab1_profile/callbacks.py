@@ -1,9 +1,8 @@
 import base64
 import io
 import webbrowser
-
-from dash import no_update
-import numpy as np
+from dash import no_update, Output, Input, State
+from src.objects.Profile import *
 from src.layout import *
 import pandas as pd
 import re
@@ -25,7 +24,7 @@ def define_callbacks1(app):
         if _shape == 'Conique':
             radius_nose = _dyn_attributes['props']['children'][1]['props']['value']  # Retrieve the radius_nose value
             if radius_nose is not None:
-                profile = Profile.Conical(_angle, radius_nose, _length)
+                profile = Conical(_angle, radius_nose, _length)
                 figure = go.Figure(
                     data=go.Scatter(
                         x=profile.get_x(),
@@ -52,7 +51,7 @@ def define_callbacks1(app):
         elif _shape == 'Parabolique':
             k = _dyn_attributes['props']['children'][1]['props']['value']  # Retrieve the k value
             if k is not None:
-                profile = Profile.Parabolic(_angle, _length, k)
+                profile = Parabolic(_angle, _length, k)
 
                 figure = go.Figure(
                     data=go.Scatter(
@@ -76,8 +75,9 @@ def define_callbacks1(app):
 
                 figure.update_layout(title="Profil Parabolique")
                 return figure, profile.to_json()
+
         elif _shape == 'Ariane 4':
-            profile = Profile.Ariane4()
+            profile = Ariane4()
             x = profile.get_x()
             y = profile.get_y()
 
@@ -102,6 +102,7 @@ def define_callbacks1(app):
                     line=dict(color='grey')
                 ))
             figure.update_layout(title="Ariane 4")
+
             return figure, profile.to_json()
         return no_update
 

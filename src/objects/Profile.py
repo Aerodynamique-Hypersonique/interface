@@ -1,6 +1,6 @@
 import math
 import numpy as np
-import json
+from src.objects.JsonObject import JsonObject
 
 
 
@@ -19,8 +19,9 @@ def load_profile_from_dict(_dict):
     return None
 
 
-class Profile:
+class Profile(JsonObject):
     def __init__(self, _section=None):
+        super().__init__()
         if _section is None:
             _section = {'body':{ 'x': np.array([]), 'y': np.array([])}}
         self.section = _section # Dictionaries of the section
@@ -31,8 +32,6 @@ class Profile:
     def get_y(self):
         return np.array(self.section['body']['y'])
 
-    def from_dict(self, _dict):
-        self.section = _dict['section']
 
     def get_section(self):
         section = self.section.copy()
@@ -50,9 +49,6 @@ class Profile:
         return {'class' : 'Profile',
                 'section': section_serializable,
                 }
-
-    def to_json(self):
-        return json.dumps(self.to_dict())
 
 
 

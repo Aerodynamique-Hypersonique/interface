@@ -1,6 +1,6 @@
-from dash import Dash, html, dcc, callback, Output, Input, State
+from dash import html, dcc
 import plotly.graph_objects as go
-from src.objects import Physics, Profile
+from src.objects import Physics
 
 dark_graph_layout = go.Layout(
     paper_bgcolor='#2c2f33',  # Dark background outside the plotting area
@@ -123,7 +123,7 @@ def get_layout():
                     id={'type': 'grid-item', 'index': i},
                     children=[
                         dcc.Graph(className='graph-grid', id={'type': 'graph-grid', 'index': i}, config={'staticPlot': True}, figure=go.Figure(layout=dark_graph_layout))],
-                    className='grid-item') for i in range(9)
+                    className='grid-item') for i in range(12)
             ], id='grid-container'),
         ]),
     ]),

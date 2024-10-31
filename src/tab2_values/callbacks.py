@@ -1,5 +1,6 @@
 from src.layout import *
-from dash import no_update
+from dash import no_update, Output, Input, State
+import json
 
 def define_callbacks2(app):
     @app.callback(

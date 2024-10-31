@@ -1,6 +1,6 @@
 from scipy.optimize import newton
 from scipy.integrate import simpson
-
+from src.objects.JsonObject import JsonObject
 from src.objects.Profile import *
 import numpy as np
 
@@ -75,8 +75,9 @@ class Pressure:
         else:
             return self.above(_z)
 
-class Atmosphere:
+class Atmosphere(JsonObject):
     def __init__(self):
+        super().__init__()
         # initial state
         self.m_mol          = ATM_SEA_LEVEL['m_mol']
         self.pressure       = ATM_SEA_LEVEL['pressure']
@@ -112,18 +113,6 @@ class Atmosphere:
                 'viscosity': self.viscosity, 'gamma': self.gamma, 'R': self.R, 'rs': self.rs,
                 'cp': self.cp, 'cv': self.cv}
 
-    def from_dict(self, _dict):
-        if _dict['class'] == 'Atmosphere':
-            self.m_mol          = _dict['m_mol']
-            self.pressure       = _dict['pressure']
-            self.temperature    = _dict['temperature']
-            self.density        = _dict['density']
-            self.viscosity      = _dict['viscosity']
-            self.gamma          = _dict['gamma']
-            self.R              = _dict['R']
-            self.altitude       = _dict['altitude']
-
-
     def to_dict(self):
         return {'class':        'Atmosphere',
                 'm_mol':        self.m_mol,
@@ -136,42 +125,40 @@ class Atmosphere:
                 'altitude':     self.altitude,
                 }
 
-    def to_json(self):
-        return json.dumps(self.to_dict())
 
 
-
-class Physics:
+class Physics(JsonObject):
     def __init__(self):
+        super().__init__()
         self.atm = Atmosphere()
         self.gravity = ATM_SEA_LEVEL['gravity']
         self.velocity_x = 0
         self.velocity_y = 0
 
-    def from_dict(self, _dict):
-        if _dict['class'] == 'Physics':
-            self.atm.from_dict(_dict['Atm'])
-
-            self.gravity    = _dict['gravity']
-            self.velocity_x = _dict['velocity_x']
-            self.velocity_y = _dict['velocity_y']
 
     def to_dict(self):
         return {'class'     : 'Physics',
-                'Atm'       : self.atm.to_dict(),
+                'atm'       : self.atm.to_dict(),
                 'gravity'   : self.gravity,
                 'velocity_x': self.velocity_x,
                 'velocity_y': self.velocity_y,
                 }
 
-    def to_json(self):
-        return json.dumps(self.to_dict())
+    # overwrite the from_dict function from JsonObject to handle the atm variable
+    def from_dict(self, _dict):
+        # Deserialize Atmosphere separately if present
+        if 'atm' in _dict:
+            self.atm.from_dict(_dict['atm'])  # Ensure atm is correctly deserialized as Atmosphere object
+            _dict.pop('atm')
+        super().from_dict(_dict) # Call the base's function
 
 
 
 
-class HypersonicObliqueShock:
+
+class HypersonicObliqueShock(JsonObject):
     def __init__(self, _physic, _profile):
+        super().__init__()
         self.physic : Physics = _physic # Physic class
         self.profile : Profile = _profile # Profile class
 
@@ -204,6 +191,27 @@ class HypersonicObliqueShock:
         # pressure coefficient variation
         self.pressure_coeff, self.drag_coeff, self.lift_coeff = self.coefficient()
 
+    def to_dict(self):
+        return {'class': 'HypersonicObliqueShock',
+                'physics': self.physic.to_dict(),
+                'profile': self.profile.to_dict(),
+                'section_shape': self.section_shape.tolist(),
+                'section_method': self.section_method,
+                'sound_speed': self.sound_speed,
+                'mach_inf': self.mach_inf,
+                'theta': self.theta,
+                'beta': self.beta,
+                'x_shock_curve': self.x_shock_curve,
+                'y_shock_curve': self.y_shock_curve,
+                'flow_characteristics': self.flow_characteristics,
+                'upstream_var_stag': self.upstream_var_stag,
+                'downstream_var_stag': self.downstream_var_stag,
+                'pressure_coeff': self.pressure_coeff,
+                'drag_coeff': self.drag_coeff,
+                'lift_coeff': self.lift_coeff
+                }
+
+
     def get_mach_number(self):
         return self.physic.velocity_x / self.sound_speed
 
@@ -212,7 +220,7 @@ class HypersonicObliqueShock:
         return self.flow_characteristics['density'] * self.flow_characteristics['velocity_n'] * _x / self.physic.atm.mu
 
     def get_boundary_layer(self, _x):
-        r = 0.85 # laminar 0.9 turbulent
+        r = 0.85 # TODO: check the reynolds > 3000 for the turbulent => 0.9 turbulent 0.85 laminar
         tf = 1 + r * ((self.physic.atm.gamma - 1) / 2) * (self.flow_characteristics['mach_amb'] ** 2)
         tbar = tf * self.flow_characteristics['temperature']
         # Chapman-Rubesin constant
