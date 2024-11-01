@@ -2,6 +2,7 @@ from dash import html, dcc
 import plotly.graph_objects as go
 from src.objects import Physics
 
+
 dark_graph_layout = go.Layout(
     paper_bgcolor='#2c2f33',  # Dark background outside the plotting area
     plot_bgcolor='#1d1f21',   # Darker background inside the plotting area
@@ -15,6 +16,7 @@ def get_layout():
     return html.Div([
     dcc.Store(id='profile-store'),
     dcc.Store(id='physics-store'),
+    dcc.Store(id='calcul-store'),
     dcc.Tabs(id="tabs", value='tab-1', children=[
         dcc.Tab(label='Création du profil', value='tab-1', className='tab', style={'backgroundColor': '#2c2f33', 'color': '#f0f0f0'},
                  selected_style={'backgroundColor': '#3a3a3a', 'color': '#ffffff'}, children=[

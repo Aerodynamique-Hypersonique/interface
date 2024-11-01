@@ -32,7 +32,6 @@ class Profile(JsonObject):
     def get_y(self):
         return np.array(self.section['body']['y'])
 
-
     def get_section(self):
         section = self.section.copy()
         section.pop('body', None)
@@ -41,14 +40,16 @@ class Profile(JsonObject):
     def to_dict(self):
         section_serializable = dict()
         for key, section in self.section.items():
-            for value in section.values():
+            section_serializable[key] = {}
+            for subkey, value in section.items():
                 try:
-                    section_serializable[key] = value.tolist()
-                except:
-                    section_serializable[key] = value
-        return {'class' : 'Profile',
-                'section': section_serializable,
-                }
+                    section_serializable[key][subkey] = value.tolist()  # Convert numpy arrays to lists
+                except AttributeError:
+                    section_serializable[key][subkey] = value
+        return {
+            'class': 'Profile',
+            'section': section_serializable,
+        }
 
 
 
@@ -307,6 +308,7 @@ class Ariane4(Profile):
 
     def to_dict(self):
         profile_dict = super().to_dict()
+
         profile_dict.update({
             'class': 'Ariane4',
         })

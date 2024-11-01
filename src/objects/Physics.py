@@ -157,18 +157,41 @@ class Physics(JsonObject):
 
 
 class HypersonicObliqueShock(JsonObject):
-    def __init__(self, _physic, _profile):
+    def __init__(self, _physic=Physics(), _profile=Profile()):
         super().__init__()
         self.physic : Physics = _physic # Physic class
         self.profile : Profile = _profile # Profile class
 
-        self.section_shape = np.concatenate(([0], np.cumsum(np.array([len(section['x']) for section in self.profile.get_section().values()]))))
+        self.section_shape = np.array([])
+        self.section_method = {}
+
+        self.sound_speed = 0
+
+        self.mach_inf = 0
+        self.theta = np.array([])
+        self.beta = np.array([])
+
+        self.x_shock_curve = np.array([])
+        self.y_shock_curve = np.array([])
+
+        self.flow_characteristics = {}
+
+        self.upstream_var_stag = {}
+        self.downstream_var_stag = {}
+
+        self.pressure_coeff = np.array([])
+        self.drag_coeff = np.array([])
+        self.lift_coeff = np.array([])
+
+        self.stand_off_distance_arr = []
+
+    def calcul(self):
+        self.section_shape = np.concatenate(
+            ([0], np.cumsum(np.array([len(section['x']) for section in self.profile.get_section().values()]))))
         self.section_method = {}
         for index, section_name in enumerate(self.profile.get_section().keys()):
             self.section_method[section_name] = {}
             self.section_method[section_name]["interval"] = (self.section_shape[index], self.section_shape[index + 1])
-
-
 
         self.sound_speed = np.sqrt(self.physic.atm.gamma * self.physic.atm.rs * self.physic.atm.temperature)
 
@@ -192,13 +215,39 @@ class HypersonicObliqueShock(JsonObject):
         self.pressure_coeff, self.drag_coeff, self.lift_coeff = self.coefficient()
 
     def to_dict(self):
+        # Convert all numpy variable into serializable value (e.g. python type)
+        self.flow_characteristics = {key: value.tolist() for key, value in self.flow_characteristics.items()}
+
+        self.x_shock_curve = list(map(float, self.x_shock_curve))
+        self.y_shock_curve = list(map(float, self.y_shock_curve))
+        self.section_shape = list(map(int, self.section_shape))
+
+        self.section_method = {
+            key: {
+                'interval': tuple(int(x) for x in value['interval']),
+                'method': value['method']
+            } if 'interval' in value else value
+            for key, value in self.section_method.items()
+        }
+
+        self.theta = list(map(float, self.theta))
+        self.beta = list(map(float, self.beta))
+
+        self.upstream_var_stag = {key: value.tolist() for key, value in self.upstream_var_stag.items()}
+        self.downstream_var_stag = {key: value.tolist() for key, value in self.downstream_var_stag.items()}
+
+        self.pressure_coeff = list(map(float, self.pressure_coeff))
+        self.drag_coeff = list(map(float, self.drag_coeff))
+        self.lift_coeff = list(map(float, self.lift_coeff))
+
+
         return {'class': 'HypersonicObliqueShock',
-                'physics': self.physic.to_dict(),
+                'physic': self.physic.to_dict(),
                 'profile': self.profile.to_dict(),
-                'section_shape': self.section_shape.tolist(),
+                'section_shape': self.section_shape,
                 'section_method': self.section_method,
-                'sound_speed': self.sound_speed,
-                'mach_inf': self.mach_inf,
+                'sound_speed': int(self.sound_speed),
+                'mach_inf': int(self.mach_inf),
                 'theta': self.theta,
                 'beta': self.beta,
                 'x_shock_curve': self.x_shock_curve,
@@ -208,9 +257,45 @@ class HypersonicObliqueShock(JsonObject):
                 'downstream_var_stag': self.downstream_var_stag,
                 'pressure_coeff': self.pressure_coeff,
                 'drag_coeff': self.drag_coeff,
-                'lift_coeff': self.lift_coeff
+                'lift_coeff': self.lift_coeff,
+                'stand_off_distance_arr': self.stand_off_distance_arr
                 }
 
+    # overwrite JsonObject from_dict function to handle physic and profile variable
+    def from_dict(self, _dict):
+        if 'physic' in _dict:
+            self.physic.from_dict(_dict['physic'])
+            _dict.pop('physic')
+        if 'profile' in _dict:
+            self.profile.from_dict(_dict['profile'])
+            _dict.pop('profile')
+
+        super().from_dict(_dict) # Call the base's function
+
+        # Convert all python variable into numpy value
+        self.flow_characteristics = {key: np.array(value) for key, value in self.flow_characteristics.items()}
+
+        self.x_shock_curve = np.array(self.x_shock_curve, dtype=np.float64)
+        self.y_shock_curve = np.array(self.y_shock_curve, dtype=np.float64)
+        self.section_shape = np.array(self.section_shape, dtype=np.int64)
+
+        self.section_method = {
+            key: {
+                'interval': np.array([int(x) for x in value['interval']], dtype=np.int64),
+                'method': value['method']
+            } if 'interval' in value else value
+            for key, value in self.section_method.items()
+        }
+
+        self.theta = np.array(self.theta, dtype=np.float64)
+        self.beta = np.array(self.beta, dtype=np.float64)
+
+        self.upstream_var_stag = {key: np.array(value) for key, value in self.upstream_var_stag.items()}
+        self.downstream_var_stag = {key: np.array(value) for key, value in self.downstream_var_stag.items()}
+
+        self.pressure_coeff = np.array(self.pressure_coeff, dtype=np.float64)
+        self.drag_coeff = np.array(self.drag_coeff, dtype=np.float64)
+        self.lift_coeff = np.array(self.lift_coeff, dtype=np.float64)
 
     def get_mach_number(self):
         return self.physic.velocity_x / self.sound_speed
@@ -225,7 +310,6 @@ class HypersonicObliqueShock(JsonObject):
         tbar = tf * self.flow_characteristics['temperature']
         # Chapman-Rubesin constant
         c0 = (self.physic.atm.mu / ATM_SEA_LEVEL['mu']) / (tbar / self.flow_characteristics['temperature'])
-        print()
         return _x * np.sqrt(c0) * ((self.physic.atm.gamma - 1) / 2) * (
                     self.flow_characteristics['mach_amb'] ** 2) / np.sqrt(self.get_local_reynolds(_x))
 
@@ -299,8 +383,6 @@ class HypersonicObliqueShock(JsonObject):
 
         x_shock_curve[x_shock_curve == 0.0] = np.nan
         y_shock_curve[y_shock_curve == 0.0] = np.nan
-
-        self.stand_off_distance_arr = []
 
         for section_name, section_values in self.profile.get_section().items():
             interval = self.section_method[section_name]['interval']

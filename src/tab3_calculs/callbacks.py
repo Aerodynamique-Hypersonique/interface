@@ -6,11 +6,11 @@ from src.objects.Profile import *
 from dash import no_update, Output, Input, State
 import json
 
-def plot_the_shock_along_profile(_profile, _hypersonic):
-    x = _profile.get_x()
-    y = _profile.get_y()
+def plot_the_shock_along_profile(_hypersonic):
+    x = _hypersonic.profile.get_x()
+    y = _hypersonic.profile.get_y()
 
-    radius_arr = [section['radius'] for section in _profile.get_section().values() if 'radius' in section]
+    radius_arr = [section['radius'] for section in _hypersonic.profile.get_section().values() if 'radius' in section]
     y_min, y_max = -5 * radius_arr[-1], 5 * radius_arr[-1]
 
     figure = go.Figure(
@@ -32,7 +32,7 @@ def plot_the_shock_along_profile(_profile, _hypersonic):
             fillpattern=dict(shape="/"),
             line=dict(color='grey')
         ))
-    figure.update_layout(title=_profile.to_dict()['class'])
+    figure.update_layout(title=_hypersonic.profile.to_dict()['class'])
 
     # shock layer
     figure.add_trace(
@@ -56,7 +56,7 @@ def plot_the_shock_along_profile(_profile, _hypersonic):
         )
     )
 
-    for index, (section_name, section_value) in enumerate(_profile.get_section().items()):
+    for index, (section_name, section_value) in enumerate(_hypersonic.profile.get_section().items()):
         if index == 0:
             figure.add_trace(
                 go.Scatter(
@@ -90,8 +90,8 @@ def plot_the_shock_along_profile(_profile, _hypersonic):
 
     return figure
 
-def plot_deviation_angle(_profile, _hypersonic):
-    x = _profile.get_x()
+def plot_deviation_angle(_hypersonic):
+    x = _hypersonic.profile.get_x()
 
     mu = np.arcsin(np.divide(1, _hypersonic.mach_inf))
 
@@ -134,9 +134,9 @@ def plot_deviation_angle(_profile, _hypersonic):
 
     return figure
 
-def plot_boundary_layer(_profile : Profile, _hypersonic : HypersonicObliqueShock):
-    x = _profile.get_x()
-    y = _profile.get_y()
+def plot_boundary_layer(_hypersonic : HypersonicObliqueShock):
+    x = _hypersonic.profile.get_x()
+    y = _hypersonic.profile.get_y()
 
     delta = _hypersonic.get_boundary_layer(x)
 
@@ -160,7 +160,7 @@ def plot_boundary_layer(_profile : Profile, _hypersonic : HypersonicObliqueShock
             fillpattern=dict(shape="/"),
             line=dict(color='grey')
         ))
-    figure.update_layout(title=_profile.to_dict()['class'])
+    figure.update_layout(title=_hypersonic.profile.to_dict()['class'])
 
     figure.add_trace(
         go.Scatter(
@@ -171,14 +171,13 @@ def plot_boundary_layer(_profile : Profile, _hypersonic : HypersonicObliqueShock
 
     return figure
 
-def plot_downstream(_profile, _hypersonic):
+def plot_downstream(_hypersonic):
     mach_amb = _hypersonic.flow_characteristics['mach_amb']
     mach_amb[np.abs(mach_amb) > _hypersonic.mach_inf] = 0
     mach_amb[mach_amb < 0] = 0
 
-    x = _profile.get_x()
+    x = _hypersonic.profile.get_x()
 
-    nb_plot = 2 * 3 # Based on the subplot from Pierre
     y_labels = ["Pression [Pa]", "Temperature [K]", "Densité [kg⋅m⁻³]", "Mach", "Vitesse du son [m⋅s⁻¹]", "Vitesse [m⋅s⁻¹]"]
     labels = ["Pression", "Temperature", "Densité", "Mₙ", "aₙ", "Vₙ"]
     dic_val = ["pressure", "temperature", "density", "mach_n", "soundspeed_n", "velocity_n"]
@@ -187,8 +186,7 @@ def plot_downstream(_profile, _hypersonic):
     for y_label, var, label in zip(y_labels, dic_val, labels):
         figure = go.Figure(layout=dark_graph_layout)
         figure.update_layout(
-            title=f"Evolution de l'écoulement caractéristique après impact \n à mach {_hypersonic.mach_inf} à"
-                  f"z = {_hypersonic.physic.atm.altitude} mètres")
+            title=f"Evolution de l'écoulement caractéristique après impact")
         figure.add_trace(
             go.Scatter(
                 x=x,
@@ -223,7 +221,7 @@ def plot_downstream(_profile, _hypersonic):
                         dash='dot',
                         width=2
                     ),
-                    name=r"$$Mach_{infini}$$"
+                    name="Machₐₗₓ"
                 )
             )
         elif var == "velocity_n":
@@ -271,9 +269,9 @@ def plot_downstream(_profile, _hypersonic):
 
     return figures
 
-def plot_contour(_profile : Profile, _hypersonic : HypersonicObliqueShock):
-    x = _profile.get_x()
-    y = _profile.get_y()
+def plot_contour(_hypersonic : HypersonicObliqueShock):
+    x = _hypersonic.profile.get_x()
+    y = _hypersonic.profile.get_y()
 
     x_shock_curve = _hypersonic.x_shock_curve
     y_shock_curve = _hypersonic.y_shock_curve
@@ -329,7 +327,7 @@ def plot_contour(_profile : Profile, _hypersonic : HypersonicObliqueShock):
             density_matrix[between_profile_shock_mask_lower, x_index] = _hypersonic.flow_characteristics['density'][index]
 
 
-    if len(_profile.get_section().keys()) > 1:
+    if len(_hypersonic.profile.get_section().keys()) > 1:
         x_curve_index = np.where((x_shock_curve <= x[-1]) & (x_shock_curve >= x[-1] - _hypersonic.stand_off_distance_arr[-1]) & (x >= x[-1]))[0]
         x_profile_index = np.where((x <= x[-1]) & (x >= x[-1] - _hypersonic.stand_off_distance_arr[-1]))[0]
         interpolated_y_curve = np.linspace(y_shock_curve[x_curve_index][0], y_shock_curve[x_curve_index][-1], len(x_profile_index))
@@ -424,7 +422,7 @@ def plot_contour(_profile : Profile, _hypersonic : HypersonicObliqueShock):
 
 def define_callbacks3(app):
     @app.callback(
-        Output({'type': 'graph-grid', 'index': ALL}, 'figure'),
+        Output('calcul-store', 'data'),
         Input('ok-button-calcul', 'n_clicks'),
         State('profile-store', 'data'),
         State('physics-store', 'data'),
@@ -436,26 +434,66 @@ def define_callbacks3(app):
         physics.from_dict(json.loads(_physics_dict))
 
         hypersonic = HypersonicObliqueShock(_physic=physics, _profile=profile)
+        hypersonic.calcul()
 
-        # plot the profile
-        figure = plot_the_shock_along_profile(profile, hypersonic)
+        return hypersonic.to_json()
+
+    @app.callback(
+        Output({'type': 'graph-grid', 'index': 0}, 'figure'),
+        Output({'type': 'graph-grid', 'index': 1}, 'figure'),
+        Output({'type': 'graph-grid', 'index': 2}, 'figure'),
+        Input('calcul-store', 'data'),
+        prevent_initial_call=True
+    )
+    def plot_first_3_graphs(_hypersonic_data):
+        hypersonic = HypersonicObliqueShock()
+        hypersonic.from_dict(json.loads(_hypersonic_data))
+
+        figure_shock = plot_the_shock_along_profile(hypersonic)
 
         # Deviation angle
-        figure_deviation = plot_deviation_angle(profile, hypersonic)
+        figure_deviation = plot_deviation_angle(hypersonic)
 
         # boundary layer
-        figure_boundary = plot_boundary_layer(profile, hypersonic)
+        figure_boundary = plot_boundary_layer(hypersonic)
+
+        return figure_shock, figure_deviation, figure_boundary
+
+    @app.callback(
+        Output({'type': 'graph-grid', 'index': 3}, 'figure'),
+        Output({'type': 'graph-grid', 'index': 4}, 'figure'),
+        Output({'type': 'graph-grid', 'index': 5}, 'figure'),
+        Output({'type': 'graph-grid', 'index': 6}, 'figure'),
+        Output({'type': 'graph-grid', 'index': 7}, 'figure'),
+        Output({'type': 'graph-grid', 'index': 8}, 'figure'),
+        Input('calcul-store', 'data'),
+        prevent_initial_call=True
+    )
+    def plot_second_6_graphs(_hypersonic_data):
+        hypersonic = HypersonicObliqueShock()
+        hypersonic.from_dict(json.loads(_hypersonic_data))
 
         # downstream graphic
-        figure_downstream_pressure, figure_downstream_temperature, figure_downstream_density,\
-            figure_downstream_mach, figure_downstream_soundspeed, figure_downstream_velocity = plot_downstream(profile, hypersonic)
+        figure_downstream_pressure, figure_downstream_temperature, figure_downstream_density, \
+            figure_downstream_mach, figure_downstream_soundspeed, figure_downstream_velocity = plot_downstream(hypersonic)
 
-        figure_contour_pressure, figure_contour_temperature, figure_contour_density = plot_contour(profile, hypersonic)
+        return figure_downstream_pressure, figure_downstream_temperature, figure_downstream_density, \
+            figure_downstream_mach, figure_downstream_soundspeed, figure_downstream_velocity
 
-        print('return')
-        return figure, figure_deviation, figure_boundary, figure_downstream_pressure, figure_downstream_temperature, \
-            figure_downstream_density, figure_downstream_mach, figure_downstream_soundspeed, figure_downstream_velocity, \
-            figure_contour_pressure, go.Figure(layout=dark_graph_layout), go.Figure(layout=dark_graph_layout)
+    @app.callback(
+        Output({'type': 'graph-grid', 'index': 9}, 'figure'),
+        Output({'type': 'graph-grid', 'index': 10}, 'figure'),
+        Output({'type': 'graph-grid', 'index': 11}, 'figure'),
+        Input('calcul-store', 'data'),
+        prevent_initial_call=True
+    )
+    def plot_last_3_graphs(_hypersonic_data):
+        hypersonic = HypersonicObliqueShock()
+        hypersonic.from_dict(json.loads(_hypersonic_data))
+        return no_update
+        figure_contour_pressure, figure_contour_temperature, figure_contour_density = plot_contour(hypersonic)
+
+        return figure_contour_pressure, figure_contour_temperature, figure_contour_density
 
 
     @app.callback(
