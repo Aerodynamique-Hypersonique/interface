@@ -8,6 +8,7 @@ import pandas as pd
 import re
 
 
+
 def define_callbacks1(app):
     @app.callback(
         Output('shape-graphs', 'figure', allow_duplicate=True),

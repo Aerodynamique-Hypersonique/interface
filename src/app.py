@@ -3,7 +3,7 @@ from src.tab2_values.callbacks import *
 from src.tab3_calculs.callbacks import *
 from dash import Dash
 
-app = Dash(suppress_callback_exceptions=True)
+app = Dash(__name__, suppress_callback_exceptions=True)
 app.layout = get_layout() # call the function from layout file
 
 define_callbacks1(app) # Callbacks tab 1

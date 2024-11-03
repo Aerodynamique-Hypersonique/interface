@@ -1,10 +1,18 @@
+import numpy as np
 from dash import ALL, ctx
 from src.layout import *
 from matplotlib.colors import PowerNorm
 from src.objects.Physics import *
 from src.objects.Profile import *
-from dash import no_update, Output, Input, State
+from dash import no_update, Output, Input, State, MATCH
 import json
+import plotly.io as pio
+import glob
+import os
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
+
 
 def plot_the_shock_along_profile(_hypersonic):
     x = _hypersonic.profile.get_x()
@@ -32,7 +40,7 @@ def plot_the_shock_along_profile(_hypersonic):
             fillpattern=dict(shape="/"),
             line=dict(color='grey')
         ))
-    figure.update_layout(title=_hypersonic.profile.to_dict()['class'])
+    figure.update_layout(title="Onde de choc autour du profil")
 
     # shock layer
     figure.add_trace(
@@ -129,6 +137,8 @@ def plot_deviation_angle(_hypersonic):
         )
     )
 
+    figure.update_layout(title="Angle de déviation")
+
     figure.update_xaxes(title_text="Unité de longueur")
     figure.update_yaxes(title_text="Angle (Degrés)")
 
@@ -168,6 +178,8 @@ def plot_boundary_layer(_hypersonic : HypersonicObliqueShock):
             y=y + delta
         )
     )
+
+    figure.update_layout(title="Couche Limite")
 
     return figure
 
@@ -345,7 +357,7 @@ def plot_contour(_hypersonic : HypersonicObliqueShock):
 
             # temperature
             temperature_matrix[shock_curve_upper_mask, x_profile_index[index] + len(x_extension)] = np.max(_hypersonic.flow_characteristics['temperature'])
-            temperature_matrix[shock_curve_lower_mask, x_profile_index[index] + len(x_extension)] = np.max(_hypersonic.flow_characteristics['temperature'])
+            temperature_matrix[shock_curve_lower_mask, x_profile_index[index] + len(x_extension)] = np.max(_hypersonic.flow_characteristics['temperature'][:4])
 
             # density
             density_matrix[shock_curve_upper_mask, x_profile_index[index] + len(x_extension)] = np.max(_hypersonic.flow_characteristics['density'])
@@ -370,26 +382,62 @@ def plot_contour(_hypersonic : HypersonicObliqueShock):
             density_matrix[between_shock_mask, index] = np.max(_hypersonic.flow_characteristics['density'])
 
     figures = []
+    paths = []
 
     contour_label = ["Variation de pression [Pa]", "Variation de température [K]", "Variation de densité [kg.m^{-3}]"]
     matrix_variable = [pressure_matrix, temperature_matrix, density_matrix]
     key_var = ["pressure", "temperature", "density"]
 
+
+
+
     for matrix_var, c_label, key in zip(matrix_variable, contour_label, key_var):
         norm = PowerNorm(gamma=0.4, vmin=np.nanmin(matrix_var), vmax=np.nanmax(matrix_var))
-        matrix_normed = norm(matrix_var)
 
-        figure = go.Figure(
-            go.Contour(
-                z=matrix_normed,
-                x=np.linspace(-1, 1, matrix_normed.shape[1]),
-                y=np.linspace(-1, 1, matrix_normed.shape[0]),
-                colorscale='Jet',
-                contours=dict(start=0, end=1, size=0.01),
-                colorbar=dict(title="Variable")
-            ),
-            layout=dark_graph_layout
-        )
+        fig = plt.figure(figsize=(15, 12))
+        ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
+
+        ax.set_xlim(np.nanmin(x), np.nanmax(x))
+        ax.set_ylim(np.nanmin(y), np.nanmax(y))
+
+        fig.suptitle(f"Contours à l'altitude: {_hypersonic.physic.atm.altitude} m", fontsize=18)
+
+        c_variable = ax.contourf(x_grid, y_grid, matrix_var, levels=125, cmap='jet', norm=norm)
+        fig.colorbar(c_variable, ax=ax, label=c_label)
+
+        ax.plot(x, y, color='black', label='Profil')
+        ax.plot(x, -y, color='black')
+        ax.plot(_hypersonic.x_shock_curve, _hypersonic.y_shock_curve, color='#F5F5F7', linestyle='--', linewidth=0.5, label='Couche de choc')
+        ax.plot(_hypersonic.x_shock_curve, -_hypersonic.y_shock_curve, color='#F5F5F7', linestyle='--', linewidth=0.5)
+        ax.fill_between(x, -y, y, color='black', alpha=0.5, hatch='//', label='Profil')
+        ax.legend(loc='upper left')
+
+        paths.append(f'assets/plots_images/contours_{c_label}')
+
+        plt.savefig(paths[-1])
+
+        plt.close(fig)
+
+        """# Define vmin and vmax
+        vmin = np.nanmin(_hypersonic.flow_characteristics[key])
+        vmax = np.nanmax(matrix_var)
+
+        # Downsample the data
+        downsample_factor = 10  # Change this factor to control how much to downsample
+        matrix_var_downsampled = matrix_var[::downsample_factor, ::downsample_factor]
+        X_grid_downsampled = x_grid[::downsample_factor, ::downsample_factor]
+        Y_grid_downsampled = y_grid[::downsample_factor, ::downsample_factor]
+
+        # Create the contour plot with Plotly
+        figure = go.Figure(data=go.Contour(
+            z=matrix_var_downsampled,
+            x=X_grid_downsampled[0],  # Assuming X_grid is 2D and represents x-coordinates
+            y=Y_grid_downsampled[:, 0],  # Assuming Y_grid is 2D and represents y-coordinates
+            colorscale='Jet',  # Use the 'jet' colorscale
+            zmin=vmin,
+            zmax=vmax,
+            colorbar=dict(title=c_label),  # Set the colorbar title
+        ))
 
         figure.add_trace(go.Scatter(x=x, y=y, mode='lines', line=dict(color='black'), name='Profil'))
         figure.add_trace(go.Scatter(x=x, y=-y, mode='lines', line=dict(color='black'), showlegend=False))
@@ -414,11 +462,20 @@ def plot_contour(_hypersonic : HypersonicObliqueShock):
             xaxis_title="X Axis",
             yaxis_title="Y Axis",
             legend=dict(x=0.02, y=0.98),
+            width=1200,  # Set desired width in pixels
+            height=600,  # Set desired height in pixels
         )
 
-        figures.append(figure)
+        print("saving")
+        pio.write_image(figure, f'assets/plots_images/contour_along_profile_{key}.png', format='png')
+        print("saved")
+        paths.append(f'assets/plots_images/contour_along_profile_{key}.png')
+        figure.update_layout(title="Contour autour du profil", showlegend=False)
+        figures.append(figure)"""
 
-    return figures
+
+    return paths
+
 
 def define_callbacks3(app):
     @app.callback(
@@ -429,6 +486,12 @@ def define_callbacks3(app):
         prevent_initial_call=True
     )
     def calcul(_n_clicks, _profile_dict, _physics_dict):
+        path_to_remove = 'assets/plots_images/*'
+        r = glob.glob(path_to_remove)
+        for i in r:
+            os.remove(i)
+
+
         profile: Profile = load_profile_from_dict(json.loads(_profile_dict))
         physics = Physics()
         physics.from_dict(json.loads(_physics_dict))
@@ -437,6 +500,7 @@ def define_callbacks3(app):
         hypersonic.calcul()
 
         return hypersonic.to_json()
+
 
     @app.callback(
         Output({'type': 'graph-grid', 'index': 0}, 'figure'),
@@ -450,12 +514,16 @@ def define_callbacks3(app):
         hypersonic.from_dict(json.loads(_hypersonic_data))
 
         figure_shock = plot_the_shock_along_profile(hypersonic)
+        figure_shock.update_layout(showlegend=False)
 
         # Deviation angle
         figure_deviation = plot_deviation_angle(hypersonic)
+        figure_deviation.update_layout(showlegend=False)
 
         # boundary layer
         figure_boundary = plot_boundary_layer(hypersonic)
+        figure_boundary.update_layout(showlegend=False)
+
 
         return figure_shock, figure_deviation, figure_boundary
 
@@ -474,37 +542,55 @@ def define_callbacks3(app):
         hypersonic.from_dict(json.loads(_hypersonic_data))
 
         # downstream graphic
-        figure_downstream_pressure, figure_downstream_temperature, figure_downstream_density, \
-            figure_downstream_mach, figure_downstream_soundspeed, figure_downstream_velocity = plot_downstream(hypersonic)
+        [figure_downstream_pressure, figure_downstream_temperature, figure_downstream_density,
+            figure_downstream_mach, figure_downstream_soundspeed, figure_downstream_velocity] = plot_downstream(hypersonic)
+
+
+
+        figure_downstream_pressure.update_layout(showlegend=False)
+        figure_downstream_temperature.update_layout(showlegend=False)
+        figure_downstream_density.update_layout(showlegend=False)
+        figure_downstream_mach.update_layout(showlegend=False)
+        figure_downstream_soundspeed.update_layout(showlegend=False)
+        figure_downstream_velocity.update_layout(showlegend=False)
+
+
 
         return figure_downstream_pressure, figure_downstream_temperature, figure_downstream_density, \
             figure_downstream_mach, figure_downstream_soundspeed, figure_downstream_velocity
 
     @app.callback(
-        Output({'type': 'graph-grid', 'index': 9}, 'figure'),
-        Output({'type': 'graph-grid', 'index': 10}, 'figure'),
-        Output({'type': 'graph-grid', 'index': 11}, 'figure'),
+        Output({'type': 'image', 'index': 9}, 'src'),
+        Output({'type': 'image', 'index': 10}, 'src'),
+        Output({'type': 'image', 'index': 11}, 'src'),
         Input('calcul-store', 'data'),
         prevent_initial_call=True
     )
     def plot_last_3_graphs(_hypersonic_data):
         hypersonic = HypersonicObliqueShock()
         hypersonic.from_dict(json.loads(_hypersonic_data))
-        return no_update
-        figure_contour_pressure, figure_contour_temperature, figure_contour_density = plot_contour(hypersonic)
+        [path1, path2, path3] = plot_contour(hypersonic)
 
-        return figure_contour_pressure, figure_contour_temperature, figure_contour_density
+        """figure_contour_pressure.update_layout(showlegend=False)
+        figure_contour_temperature.update_layout(showlegend=False)
+        figure_contour_density.update_layout(showlegend=False)"""
 
+        return path1, path2, path3
 
     @app.callback(
-        Output('highlight-store', 'data'),
+        Output('highlighted-graph', 'children'),
+        Output('highlighted-graph', 'style'),
         Input({'type': 'grid-item', 'index': ALL}, 'n_clicks'),
+        State({'type': 'graph-grid', 'index': ALL}, 'figure'),
         prevent_initial_call=True
     )
-    def highlight_graphs(_n_clicks):
-        if ctx.triggered:
-            clicked_index = ctx.triggered[0]['prop_id'].split('.')[0].split('index":')[1].split(',')[0]
-            return clicked_index
+    def highlight_grid(_div_clicked, _figures):
+        button_id = ctx.triggered_id.index
+        figure_dict = _figures[button_id]
 
+        figure = go.Figure(figure_dict)
+        figure.update_layout(showlegend=True)
 
+        return dcc.Graph(figure=figure, style=dict(height='70vh')), \
+                dict(visiblity='visible')
 

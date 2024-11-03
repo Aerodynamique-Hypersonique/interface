@@ -120,11 +120,17 @@ def get_layout():
                 html.Button("Calcul", className='button', id='ok-button-calcul'),
             ], className='div-button-centered'),
             dcc.Store(id='highlight-store', data=None),
+            html.Div(children=[], style={'visibility': 'hidden', 'border-radius': '10px'}, id='highlighted-graph'),
             html.Div(children=[
                 html.Div(
                     id={'type': 'grid-item', 'index': i},
                     children=[
-                        dcc.Graph(className='graph-grid', id={'type': 'graph-grid', 'index': i}, config={'staticPlot': True}, figure=go.Figure(layout=dark_graph_layout))],
+                        dcc.Loading(id={'type': 'loading', 'index': i}, type='circle', color='#4caf50', children=[
+                            html.Img(style={'backgroundColor': '#2c2f33'}, id={'type': 'image', 'index': i}),
+                            dcc.Graph(className='graph-grid', id={'type': 'graph-grid', 'index': i},
+                                      config={'staticPlot': True}, figure=go.Figure(layout=dark_graph_layout))
+                        ])
+                    ],
                     className='grid-item') for i in range(12)
             ], id='grid-container'),
         ]),
