@@ -11,5 +11,5 @@ define_callbacks2(app) # Callbacks tab 2
 define_callbacks3(app) # Callbacks tab 3
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
 

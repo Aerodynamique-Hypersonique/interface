@@ -1,6 +1,5 @@
 from scipy.optimize import newton
 from scipy.integrate import simpson
-from src.objects.JsonObject import JsonObject
 from src.objects.Profile import *
 import numpy as np
 
@@ -64,8 +63,6 @@ class Temperature:
 
 class Pressure:
     def __init__(self):
-        # TODO: change the constant of the earth pressures
-        # goal => be able to do calculation on other planets :)
         self.troposphere = lambda z, g, rs: ATM_SEA_LEVEL['pressure'] * (1 + z * (ATM_SEA_LEVEL['tz'] / ATM_SEA_LEVEL['temperature'])) ** (-g / (rs * ATM_SEA_LEVEL['tz']))
         self.above = lambda z: 22632 * math.exp(-(z - 11019) / 6341.6)
 
@@ -151,10 +148,6 @@ class Physics(JsonObject):
             self.atm.from_dict(_dict['atm'])  # Ensure atm is correctly deserialized as Atmosphere object
             _dict.pop('atm')
         super().from_dict(_dict) # Call the base's function
-
-
-
-
 
 class HypersonicObliqueShock(JsonObject):
     def __init__(self, _physic=Physics(), _profile=Profile()):

@@ -1,1 +1,0 @@
-{"class": "Physics", "Atm": {"class": "Atmosphere", "m_mol": 0.028966000000000002, "pressure": 79493.40759499301, "temperature": 275.15, "density": 1.0065610086656291, "viscosity": 1.725961453518588e-05, "gamma": 1.4, "R": 8.314, "altitude": 2000}, "gravity": 9.80665, "velocity_x": 2000, "velocity_y": 0}

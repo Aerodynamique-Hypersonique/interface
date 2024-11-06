@@ -26,8 +26,7 @@ def get_layout():
                         dcc.Dropdown(['Parabolique', 'Conique', 'Ariane 4'], id='dropdown-shape'),
                         html.Div(children=[
                             html.Button("OK", id='ok-button-profile', className='button', n_clicks=0),
-                            html.Button("?", id="help-button-profile", className="help-button", n_clicks=0),
-                        ], id='div-ok-help-button'),
+                        ], id='div-ok-button'),
                         dcc.Upload(id='upload-profile', children=html.Div([
                                 'Glisser-Déposer ou ',
                                 html.A('Selectionner un fichier')
@@ -126,13 +125,23 @@ def get_layout():
                     id={'type': 'grid-item', 'index': i},
                     children=[
                         dcc.Loading(id={'type': 'loading', 'index': i}, type='circle', color='#4caf50', children=[
-                            html.Img(style={'backgroundColor': '#2c2f33'}, id={'type': 'image', 'index': i}),
                             dcc.Graph(className='graph-grid', id={'type': 'graph-grid', 'index': i},
                                       config={'staticPlot': True}, figure=go.Figure(layout=dark_graph_layout))
                         ])
                     ],
-                    className='grid-item') for i in range(12)
-            ], id='grid-container'),
+                    className='grid-item') for i in range(9)
+            ], id='grid-container', className='grid-container'),
+            html.Div(children=[
+                html.Div(
+                    id={'type': 'grid-item-img', 'index': i},
+                    children=[
+                        dcc.Loading(id={'type': 'loading', 'index': i}, type='circle', color='#4caf50', children=[
+                            html.Img(style={'backgroundColor': '#2c2f33', 'max-width': '100%', 'height': 'auto', 'object-fit': 'contain'}, id={'type': 'image', 'index': i}),
+                        ])
+                    ],
+                    className='grid-item' ) for i in range(9, 12)
+            ], id='grid-container-img', className='grid-container'),
+
         ]),
     ]),
 ])
