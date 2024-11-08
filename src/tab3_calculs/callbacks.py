@@ -514,9 +514,8 @@ def plot_contour(_hypersonic : HypersonicObliqueShock):
         timestamp = datetime.datetime.now().timestamp()  # Used to resolve the client page's cache and force it to load a new image
         fig.savefig(f"{figure_path}ContourGraphic_{key}_{timestamp}.png", dpi=300, transparent=True, bbox_inches="tight")
 
-
-
-        paths.append(f"{figure_path}ContourGraphic_{key}_{timestamp}.png")
+        special_path = figure_path[4:]
+        paths.append(f"{special_path}ContourGraphic_{key}_{timestamp}.png")
         plt.close(fig)
 
     return paths
