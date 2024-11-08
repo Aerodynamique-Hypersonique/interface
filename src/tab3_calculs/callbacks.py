@@ -12,7 +12,7 @@ import matplotlib
 matplotlib.use('Agg')
 import datetime
 
-figure_path = 'assets/plots_images/'
+figure_path = 'src/assets/plots_images/'
 
 def plot_the_shock_along_profile(_hypersonic):
     x = _hypersonic.profile.get_x()
@@ -20,7 +20,6 @@ def plot_the_shock_along_profile(_hypersonic):
 
     radius_arr = [section['radius'] for section in _hypersonic.profile.get_section().values() if 'radius' in section]
     y_min, y_max = -5 * radius_arr[-1], 5 * radius_arr[-1]
-    mu = np.arcsin(np.divide(1, _hypersonic.mach_inf))
 
     figure = go.Figure(
         data=go.Scatter(
@@ -124,7 +123,7 @@ def plot_the_shock_along_profile(_hypersonic):
     axs[1].set_ylim([np.rad2deg(np.nanmin(_hypersonic.beta[np.isfinite(_hypersonic.beta)])) - 20,
                      np.rad2deg(np.nanmax(_hypersonic.theta[np.isfinite(_hypersonic.theta)])) + 20])
 
-    plt.savefig(figure_path + 'Geometry.png', dpi=300, transparent=True, bbox_inches="tight")
+    plt.savefig(figure_path + 'Geometry.png', dpi=300, transparent=False, bbox_inches="tight")
 
     figure.update_xaxes(title_text="Mètres")
     figure.update_yaxes(title_text="Mètres")
@@ -176,6 +175,21 @@ def plot_deviation_angle(_hypersonic):
     figure.update_xaxes(title_text="Unité de longueur")
     figure.update_yaxes(title_text="Angle (Degrés)")
 
+    plt.figure(figsize=(10, 6))
+    plt.plot(x, _hypersonic.theta, color='navy', label="Angle de déviation θ")
+    plt.plot(x, _hypersonic.beta, color='red', linestyle='--', label="Angle de choc β")
+    plt.plot(x, [mu] * len(x), color='purple', linestyle='-.', label="Angle de mach μ")
+
+    plt.title("Angle de déviation")
+    plt.xlabel("Unité de longueur")
+    plt.ylabel("Angle (Degrés)")
+    plt.legend()
+    plt.grid(True)
+
+    # Save the plot to figure_path
+    plt.savefig(figure_path + 'deviation_angle.png')
+    plt.close()
+
     return figure
 
 def plot_boundary_layer(_hypersonic : HypersonicObliqueShock):
@@ -222,6 +236,29 @@ def plot_boundary_layer(_hypersonic : HypersonicObliqueShock):
     )
 
     figure.update_layout(title="Couche Limite")
+
+    plt.figure(figsize=(10, 6))
+
+    # Profile plot
+    plt.fill_between(x, y, color='grey', alpha=0.5, label='Profil', hatch='/')
+    plt.fill_between(x, -y, color='grey', alpha=0.5, label='Profil (Symétrie)', hatch='/')
+
+    # Boundary layer plots
+    plt.plot(x, y + delta, color='blue', label="Couche Limite")
+    plt.plot(x, -y - delta, color='blue', linestyle='--', label="Couche Limite (Symétrie)")
+
+    # Set plot title, labels, and legend
+    profile_class = _hypersonic.profile.to_dict().get('class', 'Couche Limite')
+    plt.title(profile_class)
+    plt.xlabel("Unité de longueur")
+    plt.ylabel("Position")
+
+    plt.legend()
+    plt.grid(True)
+
+    # Save the plot to figure_path
+    plt.savefig(figure_path + 'boundary_layer.png')
+    plt.close()
 
     return figure
 
@@ -367,12 +404,13 @@ def plot_contour(_hypersonic : HypersonicObliqueShock):
     x_grid, y_grid = np.meshgrid(x_mesh, y_mesh)
 
     # split shock curve
-    index_before_0 = np.where(x_shock_curve < 0)[0]
-    x_shock_curve_neg = x_shock_curve[index_before_0[0]:index_before_0[-1] + 1]
-    x_shock_curve_pos = x_shock_curve[index_before_0[-1] + 1:]
+    if np.any(x_shock_curve < 0):
+        index_before_0 = np.where(x_shock_curve < 0)[0]
+        x_shock_curve_neg = x_shock_curve[index_before_0[0]:index_before_0[-1] + 1]
+        x_shock_curve_pos = x_shock_curve[index_before_0[-1] + 1:]
 
-    index_in_x_extension = np.array([np.abs(x_extension - x_vals).argmin() for x_vals in x_shock_curve_neg])
-    mapping_before_0 = {ext_index: shock_index for ext_index, shock_index in zip(index_in_x_extension, index_before_0)}
+        index_in_x_extension = np.array([np.abs(x_extension - x_vals).argmin() for x_vals in x_shock_curve_neg])
+        mapping_before_0 = {ext_index: shock_index for ext_index, shock_index in zip(index_in_x_extension, index_before_0)}
 
     # matrix definition
     pressure_matrix = np.full((len(y_mesh), len(x_mesh)), _hypersonic.physic.atm.pressure)
@@ -431,23 +469,23 @@ def plot_contour(_hypersonic : HypersonicObliqueShock):
             density_matrix[shock_curve_upper_mask, x_profile_index[index] + len(x_extension)] = np.max(_hypersonic.flow_characteristics['density'])
             density_matrix[shock_curve_lower_mask, x_profile_index[index] + len(x_extension)] = np.max(_hypersonic.flow_characteristics['density'])
 
+    if np.any(x_shock_curve < 0):
+        for index in range(len(y_extension)):
+            if index in index_in_x_extension:
+                corresponding_index = mapping_before_0[index]
+                upper_bound = y_shock_curve[corresponding_index]
+                lower_bound = -y_shock_curve[corresponding_index]
 
-    for index in range(len(y_extension)):
-        if index in index_in_x_extension:
-            corresponding_index = mapping_before_0[index]
-            upper_bound = y_shock_curve[corresponding_index]
-            lower_bound = -y_shock_curve[corresponding_index]
+                between_shock_mask = (y_grid[:, index] >= lower_bound) & (y_grid[:, index] <= upper_bound)
 
-            between_shock_mask = (y_grid[:, index] >= lower_bound) & (y_grid[:, index] <= upper_bound)
+                # pressure
+                pressure_matrix[between_shock_mask, index] = np.max(_hypersonic.flow_characteristics['pressure'])
 
-            # pressure
-            pressure_matrix[between_shock_mask, index] = np.max(_hypersonic.flow_characteristics['pressure'])
+                # temperature
+                temperature_matrix[between_shock_mask, index] = np.max(_hypersonic.flow_characteristics['temperature'])
 
-            # temperature
-            temperature_matrix[between_shock_mask, index] = np.max(_hypersonic.flow_characteristics['temperature'])
-
-            # density
-            density_matrix[between_shock_mask, index] = np.max(_hypersonic.flow_characteristics['density'])
+                # density
+                density_matrix[between_shock_mask, index] = np.max(_hypersonic.flow_characteristics['density'])
 
     paths = []
 
@@ -480,9 +518,6 @@ def plot_contour(_hypersonic : HypersonicObliqueShock):
 
         paths.append(f"{figure_path}ContourGraphic_{key}_{timestamp}.png")
         plt.close(fig)
-        print('Saved ContourGraphic for key:', key)
-
-        print('ok7')
 
     return paths
 
@@ -496,7 +531,7 @@ def define_callbacks3(app):
         prevent_initial_call=True
     )
     def calcul(_n_clicks, _profile_dict, _physics_dict):
-        path_to_remove = 'assets/plots_images/*'
+        path_to_remove = figure_path + '*'
         r = glob.glob(path_to_remove)
         for i in r:
             os.remove(i)
@@ -577,12 +612,6 @@ def define_callbacks3(app):
         hypersonic = HypersonicObliqueShock()
         hypersonic.from_dict(json.loads(_hypersonic_data))
         paths = plot_contour(hypersonic)
-
-
-
-        """figure_contour_pressure.update_layout(showlegend=False)
-        figure_contour_temperature.update_layout(showlegend=False)
-        figure_contour_density.update_layout(showlegend=False)"""
 
         return paths[0], paths[1], paths[2]
 

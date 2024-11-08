@@ -100,7 +100,6 @@ class Atmosphere(JsonObject):
         self.density = self.pressure / (self.temperature * self.rs)
         self.viscosity = self.viscosity * (self.temperature ** (3 / 2) / (110.4 + self.temperature))
         self.mu = self.dynamic_viscosity(self.temperature, ATM_SEA_LEVEL['temperature'], ATM_SEA_LEVEL['mu'])
-        print(self.mu)
         self.altitude   = _z
         return {'pressure': self.pressure, 'temperature': self.temperature,
                 'density': self.density, 'viscosity': self.viscosity}
@@ -302,22 +301,15 @@ class HypersonicObliqueShock(JsonObject):
 
     def get_boundary_layer(self, _x):
         reynolds = self.get_local_reynolds(_x)
-        print("reynolds")
-        print(reynolds)
         r = np.where(reynolds > 3000, 0.90, 0.85)
-        print("r")
-        print(r)
         t_f_t0 = 1 + r * ((self.physic.atm.gamma - 1) / 2) * (self.mach_inf ** 2)
-        print("tft0")
-        print(t_f_t0)
+
         mu_after_shock = self.physic.atm.dynamic_viscosity(self.flow_characteristics['temperature'],
                                                            self.physic.atm.temperature, self.physic.atm.mu)
-        print("mu apres choc")
-        print(mu_after_shock)
+
         # Chapman-Rubesin constant
         c0 = (mu_after_shock / self.physic.atm.mu) / t_f_t0
-        print("c0")
-        print(c0)
+
 
         return _x * np.sqrt(c0) * ((self.physic.atm.gamma - 1) / 2) * (
                     self.mach_inf ** 2) / np.sqrt(reynolds)
@@ -441,7 +433,6 @@ class HypersonicObliqueShock(JsonObject):
                 y_shock_curve[interval[0]:interval[1]] = y_diedre
 
             else:
-                print("expansion")
                 expansion_value = 1.3
                 x_shock_curve[interval[0]:interval[1]] = section_values['x']
                 y_shock_curve[interval[0]:interval[1]] = section_values['y'] * expansion_value
