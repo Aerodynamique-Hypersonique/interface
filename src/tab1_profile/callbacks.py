@@ -109,6 +109,8 @@ def define_callbacks1(app):
 
     @app.callback(
         Output('div-dynamic-components', 'children'),
+        Output('input-length', 'disabled'),
+        Output('input-angle', 'disabled'),
         Input('dropdown-shape', 'value'),
         prevent_initial_call=True
     )
@@ -116,7 +118,8 @@ def define_callbacks1(app):
         if value == 'Conique':
             return html.Div(children=[
                 html.B("Rayon de la tête", id='text-input-radius-front'),
-                dcc.Input(id='input-radius-front', placeholder='Entrez le rayon de la tête', type='number')])
+                dcc.Input(id='input-radius-front', placeholder='Entrez le rayon de la tête', type='number')]), \
+                False, False
         elif value == 'Parabolique':
             return html.Div(children=[
                 html.B("Type de la parabole"),
@@ -125,9 +128,9 @@ def define_callbacks1(app):
                            marks={0: '0.0', 1: '1.0', **{i / 10: f'{i / 10:.1f}' for i in range(1, 10)}},
                            included=False,
                            id='input-parabolic-k')
-            ])
+            ]), False, False
 
-        return html.Div()
+        return html.Div(), True, True
 
     @app.callback(
         Output('shape-graphs', 'figure', allow_duplicate=True),
@@ -169,13 +172,3 @@ def define_callbacks1(app):
 
 
         return no_update
-
-    @app.callback(
-        Output('help-button-profile', 'n_clicks'),
-        Input('help-button-profile', 'n_clicks'),
-        prevent_initial_call=True
-    )
-    def get_help(_n_clicks):
-        if _n_clicks > 0:
-            webbrowser.open_new_tab('helps/help_profile.html')
-        return _n_clicks

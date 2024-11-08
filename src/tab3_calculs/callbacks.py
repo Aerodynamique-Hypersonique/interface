@@ -3,7 +3,7 @@ from src.layout import *
 from matplotlib.colors import PowerNorm
 from src.objects.Physics import *
 from src.objects.Profile import *
-from dash import Output, Input, State
+from dash import Output, Input, State, no_update
 import json
 import glob
 import os
@@ -492,15 +492,16 @@ def define_callbacks3(app):
         for i in r:
             os.remove(i)
 
+        if _profile_dict is not None and _profile_dict != {} and _physics_dict is not None and _physics_dict != {}:
+            profile: Profile = load_profile_from_dict(json.loads(_profile_dict))
+            physics = Physics()
+            physics.from_dict(json.loads(_physics_dict))
 
-        profile: Profile = load_profile_from_dict(json.loads(_profile_dict))
-        physics = Physics()
-        physics.from_dict(json.loads(_physics_dict))
+            hypersonic = HypersonicObliqueShock(_physic=physics, _profile=profile)
+            hypersonic.calcul()
 
-        hypersonic = HypersonicObliqueShock(_physic=physics, _profile=profile)
-        hypersonic.calcul()
-
-        return hypersonic.to_json()
+            return hypersonic.to_json()
+        return no_update
 
 
     @app.callback(
