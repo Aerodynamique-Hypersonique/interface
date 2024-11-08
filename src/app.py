@@ -1,3 +1,8 @@
+import sys
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
 from src.tab1_profile.callbacks import *
 from src.tab2_values.callbacks import *
 from src.tab3_calculs.callbacks import *
