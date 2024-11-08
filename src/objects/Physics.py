@@ -99,16 +99,19 @@ class Atmosphere(JsonObject):
         self.temperature = self.t_evolution.get_temperature(_z)
         self.density = self.pressure / (self.temperature * self.rs)
         self.viscosity = self.viscosity * (self.temperature ** (3 / 2) / (110.4 + self.temperature))
-        self.mu = (self.temperature / ATM_SEA_LEVEL['temperature']) ** (3 / 2) * ((ATM_SEA_LEVEL['temperature'] + 110) / self.temperature + 110) * ATM_SEA_LEVEL['mu']
-
+        self.mu = self.dynamic_viscosity(self.temperature, ATM_SEA_LEVEL['temperature'], ATM_SEA_LEVEL['mu'])
+        print(self.mu)
         self.altitude   = _z
-
         return {'pressure': self.pressure, 'temperature': self.temperature,
                 'density': self.density, 'viscosity': self.viscosity}
+
     def get_atm_data(self):
         return {'m_mol': self.m_mol, 'pressure': self.pressure, 'temperature': self.temperature, 'density': self.density,
                 'viscosity': self.viscosity, 'gamma': self.gamma, 'R': self.R, 'rs': self.rs,
                 'cp': self.cp, 'cv': self.cv}
+
+    def dynamic_viscosity(self, _temp, _t0, _mu0):
+        return (_temp / _t0) ** (3 / 2) * ((_t0 + 110) / (_temp + 110)) * _mu0
 
     def to_dict(self):
         return {'class':        'Atmosphere',
@@ -295,16 +298,29 @@ class HypersonicObliqueShock(JsonObject):
 
     def get_local_reynolds(self, _x):
         # TODO: velocity y
-        return self.flow_characteristics['density'] * self.flow_characteristics['velocity_n'] * _x / self.physic.atm.mu
+        return self.physic.atm.density * self.physic.velocity_x * _x / self.physic.atm.mu
 
     def get_boundary_layer(self, _x):
-        r = 0.85 # TODO: check the reynolds > 3000 for the turbulent => 0.9 turbulent 0.85 laminar
-        tf = 1 + r * ((self.physic.atm.gamma - 1) / 2) * (self.flow_characteristics['mach_amb'] ** 2)
-        tbar = tf * self.flow_characteristics['temperature']
+        reynolds = self.get_local_reynolds(_x)
+        print("reynolds")
+        print(reynolds)
+        r = np.where(reynolds > 3000, 0.90, 0.85)
+        print("r")
+        print(r)
+        t_f_t0 = 1 + r * ((self.physic.atm.gamma - 1) / 2) * (self.mach_inf ** 2)
+        print("tft0")
+        print(t_f_t0)
+        mu_after_shock = self.physic.atm.dynamic_viscosity(self.flow_characteristics['temperature'],
+                                                           self.physic.atm.temperature, self.physic.atm.mu)
+        print("mu apres choc")
+        print(mu_after_shock)
         # Chapman-Rubesin constant
-        c0 = (self.physic.atm.mu / ATM_SEA_LEVEL['mu']) / (tbar / self.flow_characteristics['temperature'])
+        c0 = (mu_after_shock / self.physic.atm.mu) / t_f_t0
+        print("c0")
+        print(c0)
+
         return _x * np.sqrt(c0) * ((self.physic.atm.gamma - 1) / 2) * (
-                    self.flow_characteristics['mach_amb'] ** 2) / np.sqrt(self.get_local_reynolds(_x))
+                    self.mach_inf ** 2) / np.sqrt(reynolds)
 
 
     def get_deviation_and_shock_angle(self):
@@ -358,7 +374,7 @@ class HypersonicObliqueShock(JsonObject):
             if np.isclose(ref_value, 0):
                 self.section_method[section_name]['method'] = "Rankine-Hugoniot"
             elif np.all(theta_section >= 0) and ratio_close >= _tol:
-                self.section_method[section_name]['method'] = "Diedre"
+                self.section_method[section_name]['method'] = "Cone"
             elif np.all(theta_section >= 0):
                 self.section_method[section_name]['method'] = "Rankine-Hugoniot"
             else:
@@ -416,7 +432,7 @@ class HypersonicObliqueShock(JsonObject):
 
                     x_shock_curve[interval[0]:interval[1]] = x_section_curve[:-1]
                     y_shock_curve[interval[0]:interval[1]] = y_section_curve[:-1]
-            elif self.section_method[section_name]['method'] == "Diedre":
+            elif self.section_method[section_name]['method'] == "Cone":
                 length = np.max(section_values['x']) - np.min(section_values['x'])
                 x_diedre = np.linspace(0, length, len(section_values['x']))
                 y_diedre = np.tan(beta_section) * x_diedre + np.min(section_values['y'])
@@ -425,6 +441,7 @@ class HypersonicObliqueShock(JsonObject):
                 y_shock_curve[interval[0]:interval[1]] = y_diedre
 
             else:
+                print("expansion")
                 expansion_value = 1.3
                 x_shock_curve[interval[0]:interval[1]] = section_values['x']
                 y_shock_curve[interval[0]:interval[1]] = section_values['y'] * expansion_value
@@ -439,7 +456,7 @@ class HypersonicObliqueShock(JsonObject):
                                 _mach ** 2 * np.divide((gamma + 1) ** 2, 2 * (gamma - 1))) * self.physic.atm.temperature
         density = (((gamma + 1) * _mach ** 2) / ((gamma - 1) * _mach ** 2 + 2)) * self.physic.atm.density
         mach_n = np.sqrt(np.divide((gamma - 1) * _mach ** 2 + 2, 2 * gamma * _mach ** 2 - (gamma - 1)))
-        soundspeed_n = np.sqrt(np.divide(temperature, self.physic.atm.temperature * self.sound_speed))
+        soundspeed_n = np.sqrt(np.divide(temperature, self.physic.atm.temperature)) * self.sound_speed
 
         return {
             'pressure': pressure,
@@ -460,12 +477,12 @@ class HypersonicObliqueShock(JsonObject):
             return nu_current - _nu_target
 
         def pressure_ratio(_mach_up, _mach_down):
-            gamma = self.physic.atm.gamma
-            return np.divide(1 + 0.5 * (gamma - 1) * _mach_up ** 2, 1 + 0.5 * (gamma - 1) * _mach_down ** 2) ** (-gamma / (gamma - 1))
+            _gamma = self.physic.atm.gamma
+            return np.divide(1 + 0.5 * (_gamma - 1) * _mach_up ** 2, 1 + 0.5 * (_gamma - 1) * _mach_down ** 2) ** (-_gamma / (_gamma - 1))
 
         def temperature_ratio(_mach_up, _mach_down):
-            gamma = self.physic.atm.gamma
-            return (1 + 0.5 * (gamma - 1) * _mach_down ** 2) / (1 + 0.5 * (gamma - 1)) * _mach_up ** 2
+            _gamma = self.physic.atm.gamma
+            return (1 + 0.5 * (_gamma - 1) * _mach_down ** 2) / (1 + 0.5 * (_gamma - 1)) * _mach_up ** 2
 
         def rho(_pressure, _temperature):
             # TODO: check the value of rs if it R or rs
@@ -480,13 +497,14 @@ class HypersonicObliqueShock(JsonObject):
         delta_arr = self.theta[_interval[0] - 1] + self.theta[_interval[0]:_interval[1]]
 
         pressure_val = pressure_ratio(mach_c, _mach) * _pressure_up
-        temperature_val = temperature_ratio(mach_c, _mach) * _temperature_up
+        temperature_val = (temperature_ratio(mach_c, _mach))**(-1) * _temperature_up
 
         beta = self.beta[_interval[0]:_interval[1]]
         theta = self.theta[_interval[0]:_interval[1]]
 
         # vectors initialization
-        pressure_arr, temperature_arr, density_arr, mach_n_arr, soundspeed_n_arr, velocity_n_arr, nu_arr, mach_arr = [np.zeros(len(self.profile.get_x())) for _ in range(8)]
+        vector_length = _interval[1] - _interval[0]
+        pressure_arr, temperature_arr, density_arr, mach_n_arr, soundspeed_n_arr, velocity_n_arr, nu_arr, mach_arr = [np.zeros(vector_length) for _ in range(8)]
         mach_i = 0
         for index in range(_interval[1] - _interval[0]):
             if index == 0:
@@ -522,7 +540,7 @@ class HypersonicObliqueShock(JsonObject):
             value = self.section_method[section_name]['interval']
             method = self.section_method[section_name]['method']
 
-            if method == "Rankine-Hugoniot" or method == "Diedre":
+            if method == "Rankine-Hugoniot" or method == "Cone":
                 dictionary = self.variable_downstream_of_shock(_mach=self.mach_inf * np.sin(self.beta[value[0]:value[1]]))
 
                 pressure_arr[value[0]:value[1]] = dictionary['pressure']
@@ -580,11 +598,13 @@ class HypersonicObliqueShock(JsonObject):
             return 0.5 * self.physic.atm.density * self.physic.velocity_x ** 2 * _s_ref * _coeff
 
         cp_arr, dsx_arr, dsy_arr, dcx_arr, dcy_arr = [np.zeros(len(self.theta)) for _ in range(5)]
-        s_ref_arr = []
-
+        s_ref = 0
         gamma = self.physic.atm.gamma
         for section_name, section_value in self.profile.get_section().items():
             interval = self.section_method[section_name]['interval']
+
+            s_ref_section = np.abs(simpson(section_value['y'], x=section_value['x']))
+            s_ref += s_ref_section
 
             if 'radius' in section_value:
                 # pressure coefficient
@@ -592,37 +612,29 @@ class HypersonicObliqueShock(JsonObject):
                 cp_blunt = kp_star * np.sin(self.theta[interval[0]:interval[1]]) ** 2
                 cp_arr[interval[0]:interval[1]] = cp_blunt
 
-                # drag coefficient
-                s_ref = np.abs(simpson(section_value['y'], x=section_value['x'])) # TODO: Not the same function as Pierre
-                s_ref_arr.append(s_ref)
-
                 ds = np.sqrt(np.diff(section_value['x']) ** 2 + np.diff(section_value['y']) ** 2)
                 ds = np.append(ds, ds[-1])
 
                 dsx_arr[interval[0]:interval[1]] = ds * np.cos(self.theta[interval[0]:interval[1]])
                 dsy_arr[interval[0]:interval[1]] = ds * np.sin(self.theta[interval[0]:interval[1]])
 
-                dcx_arr[interval[0]:interval[1]] = -cp_blunt * dsx_arr[interval[0]:interval[1]] / s_ref
-                dcy_arr[interval[0]:interval[1]] = np.abs(-cp_blunt * dsy_arr[interval[0]:interval[1]] * s_ref)
+                dcx_arr[interval[0]:interval[1]] = -cp_blunt * dsx_arr[interval[0]:interval[1]] / s_ref_section
+                dcy_arr[interval[0]:interval[1]] = np.abs(-cp_blunt * dsy_arr[interval[0]:interval[1]] * s_ref_section)
 
-            elif self.section_method[section_name]['method'] == "Diedre":
+            elif self.section_method[section_name]['method'] == "Cone":
                 # pressure coefficient
                 kp_star = 2 * (gamma + 1) * (gamma + 7) / (gamma + 3) ** 2
                 cp_diedre = kp_star * np.sin(self.theta[interval[0]:interval[1]]) ** 2
                 cp_arr[interval[0]:interval[1]] = cp_diedre
 
-                # drag coefficient
-                s_ref = np.abs(simpson(section_value['y'], x=section_value['x']))
-                s_ref_arr.append(s_ref)
-
                 ds = np.sqrt(np.diff(section_value['x']) ** 2 + np.diff(section_value['y']) ** 2)
                 ds = np.append(ds, ds[-1])
 
                 dsx_arr[interval[0]:interval[1]] = ds * np.cos(self.theta[interval[0]:interval[1]])
                 dsy_arr[interval[0]:interval[1]] = ds * np.sin(self.theta[interval[0]:interval[1]])
 
-                dcx_arr[interval[0]:interval[1]] = -cp_diedre * dsx_arr[interval[0]:interval[1]] / s_ref
-                dcy_arr[interval[0]:interval[1]] = np.abs(-cp_diedre * dsy_arr[interval[0]:interval[1]] / s_ref)
+                dcx_arr[interval[0]:interval[1]] = -cp_diedre * dsx_arr[interval[0]:interval[1]] / s_ref_section
+                dcy_arr[interval[0]:interval[1]] = np.abs(-cp_diedre * dsy_arr[interval[0]:interval[1]] / s_ref_section)
 
             elif self.section_method[section_name]['method'] == "Prandtl-Meyer":
                 # pressure coefficient
@@ -630,18 +642,14 @@ class HypersonicObliqueShock(JsonObject):
                             self.flow_characteristics['pressure'][interval[0]:interval[1]] / self.physic.atm.pressure - 1)
                 cp_arr[interval[0]:interval[1]] = cp
 
-                # drag coefficient
-                s_ref = np.abs(simpson(section_value['y'], x=section_value['x']))
-                s_ref_arr.append(s_ref)
-
                 ds = np.sqrt(np.diff(section_value['x']) ** 2 + np.diff(section_value['y']) ** 2)
                 ds = np.append(ds, ds[-1])
 
                 dsx_arr[interval[0]:interval[1]] = ds * np.cos(self.theta[interval[0]:interval[1]])
                 dsy_arr[interval[0]:interval[1]] = ds * np.sin(self.theta[interval[0]:interval[1]])
 
-                dcx_arr[interval[0]:interval[1]] = -cp * dsx_arr[interval[0]:interval[1]] / s_ref
-                dcy_arr[interval[0]:interval[1]] = np.abs(-cp * dsy_arr[interval[0]:interval[1]] / s_ref)
+                dcx_arr[interval[0]:interval[1]] = -cp * dsx_arr[interval[0]:interval[1]] / s_ref_section
+                dcy_arr[interval[0]:interval[1]] = np.abs(-cp * dsy_arr[interval[0]:interval[1]] / s_ref_section)
 
             else:
                 # pressure coefficient
@@ -649,10 +657,6 @@ class HypersonicObliqueShock(JsonObject):
                 cp = (self.flow_characteristics['pressure'][interval[0]:interval[1]] - self.physic.atm.pressure) / q_inf
                 cp_arr[interval[0]:interval[1]] = cp
 
-                # drag coefficient
-                s_ref = np.abs(simpson(section_value['y'], x=section_value['x']))
-                s_ref_arr.append(s_ref)
-
                 ds = np.sqrt(np.diff(section_value['x']) ** 2 + np.diff(section_value['y']) ** 2)
                 ds = np.append(ds, ds[-1])
 
@@ -662,10 +666,10 @@ class HypersonicObliqueShock(JsonObject):
                 dcx_arr[interval[0]:interval[1]] = -cp * dsx_arr[interval[0]:interval[1]] / s_ref
                 dcy_arr[interval[0]:interval[1]] = np.abs(-cp * dsy_arr[interval[0]:interval[1]] / s_ref)
 
-        self.cx = np.sum(dcx_arr) / np.sum(s_ref_arr)
-        self.cy = np.sum(dcy_arr) / np.sum(s_ref_arr)
+        self.cx = np.sum(dcx_arr)
+        self.cy = np.sum(dcy_arr)
 
-        self.fx = 2 * aero_forces(_coeff=self.cx, _s_ref=np.sum(s_ref_arr))
-        self.fy = aero_forces(_coeff=self.cy, _s_ref=np.sum(s_ref_arr))
+        self.fx = 2 * aero_forces(_coeff=self.cx, _s_ref=s_ref)
+        self.fy = aero_forces(_coeff=self.cy, _s_ref=s_ref)
 
         return cp_arr, dcx_arr, dcy_arr

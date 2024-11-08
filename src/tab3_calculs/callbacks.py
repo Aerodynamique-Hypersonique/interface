@@ -20,6 +20,7 @@ def plot_the_shock_along_profile(_hypersonic):
 
     radius_arr = [section['radius'] for section in _hypersonic.profile.get_section().values() if 'radius' in section]
     y_min, y_max = -5 * radius_arr[-1], 5 * radius_arr[-1]
+    mu = np.arcsin(np.divide(1, _hypersonic.mach_inf))
 
     figure = go.Figure(
         data=go.Scatter(
@@ -208,7 +209,15 @@ def plot_boundary_layer(_hypersonic : HypersonicObliqueShock):
     figure.add_trace(
         go.Scatter(
             x=x,
-            y=y + delta
+            y=y + delta,
+            name="Couche Limite"
+        )
+    )
+    figure.add_trace(
+        go.Scatter(
+            x=x,
+            y=-y - delta,
+            name="Couche Limite (Symétrie)"
         )
     )
 
@@ -449,7 +458,7 @@ def plot_contour(_hypersonic : HypersonicObliqueShock):
     for matrix_var, c_label, key in zip(matrix_variable, contour_label, key_var):
         norm = PowerNorm(gamma=0.4, vmin=np.nanmin(matrix_var), vmax=np.nanmax(matrix_var))
 
-        fig, ax = plt.subplots(figsize=(7, 6))
+        fig, ax = plt.subplots(figsize=(12, 6))
 
         c_variable = ax.contourf(x_grid, y_grid, matrix_var, levels=125, cmap='jet', norm=norm)
 

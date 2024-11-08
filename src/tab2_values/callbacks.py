@@ -10,14 +10,13 @@ def define_callbacks2(app):
         State('input-pressure', 'value'),
         State('input-temperature', 'value'),
         State('input-velocity-x', 'value'),
-        State('input-velocity-y', 'value'),
         State('input-density', 'value'),
         State('input-viscosity', 'value'),
         State('input-gamma', 'value'),
         State('input-gravity', 'value'),
         prevent_initial_call=True
     )
-    def set_values(_n_clicks, _altitude, _m_mol, _pressure, _temperature, _velo_x, _velo_y, _density, _viscosity,
+    def set_values(_n_clicks, _altitude, _m_mol, _pressure, _temperature, _velo_x, _density, _viscosity,
                       _gamma, _g):
         physics = Physics.Physics()
 
@@ -31,7 +30,6 @@ def define_callbacks2(app):
         physics.gravity         = _g
 
         physics.velocity_x = _velo_x
-        physics.velocity_y = _velo_y
 
         return physics.to_json()
 

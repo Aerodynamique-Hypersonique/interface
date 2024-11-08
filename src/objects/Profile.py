@@ -154,18 +154,14 @@ class Conical(Profile):
         self.x -= self.x[0]
 
         section = {
-            'nose': {
-                'x': self.x_nose[:nb_points - 1],
-                'y': self.y_nose[:nb_points - 1]
-            },
             'structure': {
-                'x': self.x_structure,
-                'y': self.y_structure,
-                'radius': self.radius
+                'x': self.x,
+                'y': self.y,
+                'radius': self.nose_rad
             },
             'body': {
                 'x': self.x,
-                'y': self.y,
+                'y': self.y
             }
         }
 
@@ -230,8 +226,8 @@ class Ariane4(Profile):
         nb_points = 1000
 
         # Première partie du profil : la coiffe
-        self.radius_cover = 1.5
-        length_cover = 8 * self.radius_cover
+        self.radius_cover = 2
+        length_cover = 30
         self.x_cover = np.linspace(0, length_cover, nb_points)
         self.y_cover = self.radius_cover * (1 + np.sqrt(1 - np.square(np.divide(self.x_cover - length_cover, length_cover)))) - self.radius_cover
 
